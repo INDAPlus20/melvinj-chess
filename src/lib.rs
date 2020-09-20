@@ -63,7 +63,7 @@ fn make_pawn(data: Piecedata) -> Option<Pawn>{
     }
 }
 
-fn move_check_a(game: &Game, m: Move) -> bool{
+fn move_check_a(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -89,8 +89,8 @@ fn move_check_a(game: &Game, m: Move) -> bool{
     }
     
     //Find the piece to be moved
-    let pieceOpt = game.piece_at_pos(m.start_pos);
-    match pieceOpt{
+    let pieceOpt = game.piece_at_pos(&(m.start_pos));
+    match &pieceOpt{
         None => return false,//No piece found
         Some(piece) => {//Piece found
             if piece.is_white != game.white_turn{//Check for incorrect "color"
@@ -106,7 +106,7 @@ fn move_check_a(game: &Game, m: Move) -> bool{
 let piece = pieceOpt.unwrap();
 
 //Find the piece at the target position
-match game.piece_at_pos(m.end_pos){
+match game.piece_at_pos(&m.end_pos){
     Some(target) => {
         if target.is_white == piece.is_white{
             //Attacking own team
@@ -124,9 +124,9 @@ trait Piece {
     
     fn is_alive(&self) -> bool;
     
-    fn is_move_allowed(&self, game: &Game, m: Move) -> bool;
+    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool;
     
-    fn doMove(&self, g: &Game, m: Move);
+    fn doMove(self, g: &Game, m: Move);
 }
 
 struct Move {
@@ -150,7 +150,7 @@ impl Move {
     
     fn to_string_vec(&self) -> Vec<String>{
         //Returns the move in string form, eg. a2-a3
-        let vec: Vec<String> = Vec::new();
+        let mut vec: Vec<String> = Vec::new();
         vec.push(self.start_pos.to_string());
         vec.push(self.end_pos.to_string());
         vec
@@ -167,7 +167,7 @@ impl Position {
         Position{x:x,y:y}
     }
     fn to_string(&self) -> String{
-        let string = String::new();
+        let mut string = String::with_capacity(2);
         match self.x {
             0 => string.push('a'),
             1 => string.push('b'),
@@ -176,7 +176,8 @@ impl Position {
             4 => string.push('e'),
             5 => string.push('f'),
             6 => string.push('g'),
-            7 => string.push('h')
+            7 => string.push('h'),
+            _ => eprintln!("VALUE OUT OF RANGE, POS->STRING")
         }
         match self.y {
             0 => string.push('1'),
@@ -186,10 +187,15 @@ impl Position {
             4 => string.push('5'),
             5 => string.push('6'),
             6 => string.push('7'),
-            7 => string.push('8')
+            7 => string.push('8'),
+            _ => eprintln!("VALUE OUT OF RANGE, POS->STRING")
         }
         
         string
+    }
+
+    pub fn clone(&self)->Position{
+        Position::new(self.x,self.y)
     }
 }
 
@@ -207,6 +213,75 @@ impl Piece for Pawn {
     fn is_alive(&self)->bool{
         self.piece.is_alive
     }
+
+    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool{
+        //Boiler plate
+        if !move_check_a(game, &m) {
+            return false
+        }
+        
+        //Unique code for pawn movement
+        if distance(m.start_pos.y, m.end_pos.y) == 2 && distance(m.start_pos.x,m.end_pos.x) == 0{
+            //Initial double step
+            if self.moved{
+                return false
+            }
+            let avg_y: u8 = (m.start_pos.y + m.end_pos.y)/2; 
+            match game.piece_at_pos(&m.end_pos){
+                Some(_) => return false,
+                None => ()
+            }
+            let temp_pos: Position = Position::new(m.start_pos.x, avg_y);
+            match game.piece_at_pos(&temp_pos) {
+                Some(_) => return false,
+                None => ()
+            }
+
+        }
+        //TODO fix
+        if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
+            return false
+        }
+        
+        //Check intermediary positions
+        //-No intermediary positions for regular pawn movement
+        
+        //Try the move
+        let killed_piece = game.piece_at_pos(&m.end_pos);
+        match killed_piece{
+            //Kill the target, if it exists
+            Some(mut kp) => kp.is_alive = false,
+            None => ()
+        }
+        game.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos.clone();
+        
+        
+        let checked = game.check_for_check(game.piece_at_pos(&m.end_pos).unwrap().is_white);
+        
+        //Revert (this function is only for checking if the move is valid)
+        game.piece_at_pos(&m.end_pos).unwrap().position = m.start_pos;
+        match killed_piece {
+            Some(mut kp) => kp.is_alive = true, 
+            //^How would I write this properly?
+            //I WANT MY JAVA BACK!
+
+            None => ()
+        }
+        
+        checked
+        //Return result from checkCheck
+    }
+
+    fn doMove(mut self, g: &Game, m: Move){
+        let killed_piece = g.piece_at_pos(&m.end_pos);
+        match killed_piece{
+            //Kill the target, if it exists
+            Some(mut kp) => kp.is_alive = false,
+            None => ()
+        }
+        g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
+        self.piece.moved = true;
+    }
 }
 
 struct King {
@@ -215,12 +290,14 @@ struct King {
 
 impl King {
     fn is_checked(board: Game) -> bool{
+        //Isn't this just a wack checkChecker?
         false
     }
 }
 
+//Testing function
 fn ahepp(k: King, g: &Game, m: Move)->bool{
-    return move_check_a(g,m);
+    return move_check_a(g,&m);
 }
 
 impl Piece for King {
@@ -234,12 +311,12 @@ impl Piece for King {
         self.piece.is_alive
     }
     
-    fn is_move_allowed(&self, game: &Game, m: Move) -> bool{
+    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool{
         //A king should never move more than one step in any direction in one move¨
         //Except for castling, which can be added later.
         
         //Boiler plate
-        if !move_check_a(game, m) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -254,68 +331,42 @@ impl Piece for King {
         //-No intermediary positions for regular king movement
         
         //Try the move
-        let killed_piece = game.piece_at_pos(m.end_pos);
+        let killed_piece = game.piece_at_pos(&m.end_pos);
         match killed_piece{
             //Kill the target, if it exists
-            Some(kp) => kp.is_alive = false
+            Some(mut kp) => kp.is_alive = false,
+            None => ()
         }
-        game.piece_at_pos(m.start_pos).unwrap().position = m.end_pos;
+        game.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos.clone();
         
         
-        let checked = game.check_for_check(game.piece_at_pos(m.end_pos).unwrap().is_white);
+        let checked = game.check_for_check(game.piece_at_pos(&m.end_pos).unwrap().is_white);
         
         //Revert (this function is only for checking if the move is valid)
-        game.piece_at_pos(m.end_pos).unwrap().position = m.start_pos;
+        game.piece_at_pos(&m.end_pos).unwrap().position = m.start_pos;
         match killed_piece {
-            Some(kp) => kp.is_alive = true
+            Some(mut kp) => kp.is_alive = true,
+            None => ()
         }
         
         checked
         //Return result from checkCheck
     }
     
-    fn doMove(&self, g: &Game, m: Move){
-        let killed_piece = g.piece_at_pos(m.end_pos);
+    fn doMove(mut self, g: &Game, m: Move){
+        let killed_piece = g.piece_at_pos(&m.end_pos);
         match killed_piece{
             //Kill the target, if it exists
-            Some(kp) => kp.is_alive = false
+            Some(mut kp) => kp.is_alive = false,
+            None => ()
         }
-        g.piece_at_pos(m.start_pos).unwrap().position = m.end_pos;
+        g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
         self.piece.moved = true;
     }
 }
 
 fn distance(c1: u8, c2: u8) -> u8{
     c1.max(c2) - c1.min(c2)
-}
-
-fn createPieces(game: Game) -> Game{
-    //Generate all pieces at default starting positions
-    //This is ugly, but it should work
-    game.board.push(Piecedata::new(Position::new(0,0),true,String::from("rook")));
-    game.board.push(Piecedata::new(Position::new(1,0),true,String::from("nkight")));
-    game.board.push(Piecedata::new(Position::new(2,0),true,String::from("bishop")));
-    game.board.push(Piecedata::new(Position::new(3,0),true,String::from("queen")));
-    game.board.push(Piecedata::new(Position::new(4,0),true,String::from("king")));
-    game.board.push(Piecedata::new(Position::new(5,0),true,String::from("bishop")));
-    game.board.push(Piecedata::new(Position::new(6,0),true,String::from("nkight")));
-    game.board.push(Piecedata::new(Position::new(7,0),true,String::from("rook")));
-    for i in 0..8{
-        game.board.push(Piecedata::new(Position::new(i,1),true,String::from("pawn")));
-    }
-    
-    game.board.push(Piecedata::new(Position::new(0,7),false,String::from("rook")));
-    game.board.push(Piecedata::new(Position::new(1,7),false,String::from("nkight")));
-    game.board.push(Piecedata::new(Position::new(2,7),false,String::from("bishop")));
-    game.board.push(Piecedata::new(Position::new(3,7),false,String::from("queen")));
-    game.board.push(Piecedata::new(Position::new(4,7),false,String::from("king")));
-    game.board.push(Piecedata::new(Position::new(5,7),false,String::from("bishop")));
-    game.board.push(Piecedata::new(Position::new(6,7),false,String::from("nkight")));
-    game.board.push(Piecedata::new(Position::new(7,7),false,String::from("rook")));
-    for i in 0..8{
-        game.board.push(Piecedata::new(Position::new(i,6),false,String::from("pawn")));
-    }
-    game
 }
 
 impl Game {
@@ -328,8 +379,8 @@ impl Game {
             board:Vec::new()
         };
         
-        game = createPieces(game);
-        return game;
+        let realgame = game.createPieces();
+        return realgame;
         
     }
     
@@ -348,14 +399,43 @@ impl Game {
     pub fn get_game_state(&self) -> GameState {
         self.state
     }
+
+    fn createPieces(mut self) -> Game{
+        //Generate all pieces at default starting positions
+        //This is ugly, but it should work
+        self.board.push(Piecedata::new(Position::new(0,0),true,String::from("rook")));
+        self.board.push(Piecedata::new(Position::new(1,0),true,String::from("nkight")));
+        self.board.push(Piecedata::new(Position::new(2,0),true,String::from("bishop")));
+        self.board.push(Piecedata::new(Position::new(3,0),true,String::from("queen")));
+        self.board.push(Piecedata::new(Position::new(4,0),true,String::from("king")));
+        self.board.push(Piecedata::new(Position::new(5,0),true,String::from("bishop")));
+        self.board.push(Piecedata::new(Position::new(6,0),true,String::from("nkight")));
+        self.board.push(Piecedata::new(Position::new(7,0),true,String::from("rook")));
+        for i in 0..8{
+            self.board.push(Piecedata::new(Position::new(i,1),true,String::from("pawn")));
+        }
+        
+        self.board.push(Piecedata::new(Position::new(0,7),false,String::from("rook")));
+        self.board.push(Piecedata::new(Position::new(1,7),false,String::from("nkight")));
+        self.board.push(Piecedata::new(Position::new(2,7),false,String::from("bishop")));
+        self.board.push(Piecedata::new(Position::new(3,7),false,String::from("queen")));
+        self.board.push(Piecedata::new(Position::new(4,7),false,String::from("king")));
+        self.board.push(Piecedata::new(Position::new(5,7),false,String::from("bishop")));
+        self.board.push(Piecedata::new(Position::new(6,7),false,String::from("nkight")));
+        self.board.push(Piecedata::new(Position::new(7,7),false,String::from("rook")));
+        for i in 0..8{
+            self.board.push(Piecedata::new(Position::new(i,6),false,String::from("pawn")));
+        }
+        self
+    }
     
     /// If a piece is standing on the given tile, return all possible 
     /// new positions of that piece. Don't forget to the rules for check. 
     /// 
     /// (optional) Don't forget to include en passent and castling.
-    pub fn get_possible_moves(&self, position: Position) -> Option<Vec<Position>> {
+    pub fn get_possible_moves(self, position: Position) -> Option<Vec<Position>> {
         let vec:Vec<Position> = Vec::new();
-        match self.piece_at_pos(position){
+        match self.piece_at_pos(&position){
             Some(piece) => {
                 for x in 0..8{
                     for y in 0..8{
@@ -366,12 +446,12 @@ impl Game {
                         let temp_move = Move::new(position, Position::new(x,y));
                         match variant{
                             "king" => {
-                                if make_king(piece).unwrap().is_move_allowed(self, temp_move) {
+                                if make_king(piece).unwrap().is_move_allowed(&mut self, temp_move) {
                                     vec.push(Position::new(x,y));
                                 }
                             }
                             "pawn" => {
-                                if make_pawn(piece).unwrap().is_move_allowed(self, temp_move) {
+                                if make_pawn(piece).unwrap().is_move_allowed(&mut self, temp_move) {
                                     vec.push(Position::new(x,y));   
                                 }
                             }
@@ -386,7 +466,7 @@ impl Game {
         }
     }
             
-            pub fn piece_at_pos(&self, pos: Position) -> Option<Piecedata>{
+            pub fn piece_at_pos(&self, pos: &Position) -> Option<Piecedata>{
                 //Returns the Piecedata of the piece at a given position
                 for piece in self.board{
                     if !piece.is_alive{
@@ -420,6 +500,8 @@ impl Game {
                 }
             }
             
+            //TODO: Make this return an option of vec of checking pieces (or positions)
+            //In order to be able to check for checkmate
             fn check_for_check(&self, check_white_king: bool) -> bool{
                 //true means that the king of the specified color is in check.
                 if check_white_king{
@@ -438,12 +520,12 @@ impl Game {
                             //Then check if the move is allowed
                             //If it is, the king is in check
                             "king" => {
-                                if make_king(pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_king(pieced).unwrap().is_move_allowed(&mut self, temp_move) {
                                     return true    
                                 }
                             }
                             "pawn" => {
-                                if make_pawn(pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_pawn(pieced).unwrap().is_move_allowed(&mut self, temp_move) {
                                     return true    
                                 }
                             }
@@ -467,12 +549,12 @@ impl Game {
                             //Then check if the move is allowed
                             //If it is, the king is in check
                             "king" => {
-                                if make_king(pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_king(pieced).unwrap().is_move_allowed(&mut self, temp_move) {
                                     return true    
                                 }
                             }
                             "pawn" => {
-                                if make_pawn(pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_pawn(pieced).unwrap().is_move_allowed(&mut self, temp_move) {
                                     return true    
                                 }
                             }

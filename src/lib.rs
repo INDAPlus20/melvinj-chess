@@ -64,7 +64,7 @@ fn make_pawn(data: &Piecedata) -> Option<Pawn>{
     }
 }
 
-fn move_check_a(game: Game, m: &Move) -> bool{
+fn move_check_a(game: &mut Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -91,15 +91,13 @@ fn move_check_a(game: Game, m: &Move) -> bool{
     
     //Find the piece to be moved
     let white_turn = game.white_turn;
-    let piece_opt:Option<&mut Piecedata>;
+    let mut piece_opt:Option<&mut Piecedata> = None;
 
     //In order to reduce the scope of the temp_game reference
-    if true{
-        let temp_game = &mut game;
-        piece_opt = game.piece_at_pos(&m.start_pos);
-    }
-    let pieceOpt = (&mut game).piece_at_pos(&(m.start_pos));
-    match &pieceOpt{
+    
+    piece_opt = game.piece_at_pos(&m.start_pos);
+
+    match piece_opt{
         None => return false,//No piece found
         Some(piece) => {//Piece found
             if piece.is_white != white_turn{//Check for incorrect "color"
@@ -110,9 +108,10 @@ fn move_check_a(game: Game, m: &Move) -> bool{
             }
         }
     }
+    piece_opt = game.piece_at_pos(&m.start_pos);
 
     //Since a None value would have returned false by now, we can unwrap and store the piecedata to be moved
-    let piece = pieceOpt.unwrap();
+    let piece = piece_opt.unwrap();
 
     //Find the piece at the target position
     match game.piece_at_pos(&m.end_pos){
@@ -127,7 +126,7 @@ fn move_check_a(game: Game, m: &Move) -> bool{
     return true;
 }
 
-fn move_check_b(game: Game, n: &Move) -> bool{
+fn move_check_b(game: &mut Game, n: &Move) -> bool{
     let m:Move = Move::new(n.start_pos.clone(),n.end_pos.clone());
     //Try the move
     let killed_piece = game.piece_at_pos(&m.end_pos);
@@ -172,7 +171,7 @@ trait Piece {
     
     fn is_alive(&self) -> bool;
     
-    fn is_move_allowed(self, game: Game, m: Move) -> bool;
+    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool;
     
     fn doMove(self, g: &Game, m: Move);
 }
@@ -263,9 +262,9 @@ impl Piece for Pawn {
         self.piece.is_alive
     }
     
-    fn is_move_allowed(self, game: Game, m: Move) -> bool{
+    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool{
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(&mut game, &m) {
             return false
         }
         
@@ -338,12 +337,12 @@ impl Piece for King {
         self.piece.is_alive
     }
     
-    fn is_move_allowed(self, game: Game, m: Move) -> bool{
+    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool{
         //A king should never move more than one step in any direction in one move¨
         //Except for castling, which can be added later.
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(&mut game, &m) {
             return false
         }
         
@@ -454,12 +453,12 @@ impl Game {
                         let temp_move = Move::new(position.clone(), Position::new(x,y));
                         match variant{
                             "king" => {
-                                if make_king(&piece).unwrap().is_move_allowed(self, temp_move) {
+                                if make_king(&piece).unwrap().is_move_allowed(&mut self, temp_move) {
                                     vec.push(Position::new(x,y));
                                 }
                             }
                             "pawn" => {
-                                if make_pawn(&piece).unwrap().is_move_allowed(self, temp_move) {
+                                if make_pawn(&piece).unwrap().is_move_allowed(&mut self, temp_move) {
                                     vec.push(Position::new(x,y));   
                                 }
                             }
@@ -513,12 +512,16 @@ impl Game {
     
     //TODO: Make this return an option of vec of checking pieces (or positions)
     //In order to be able to check for checkmate
-    fn check_for_check(self, check_white_king: bool) -> bool{
+    fn check_for_check(&mut self, check_white_king: bool) -> bool{
         //true means that the king of the specified color is in check.
+        //let mut_ref_game = self;
         if check_white_king{
             //Check all black pieces
             for i in 16..32{
-                let pieced = &self.board[i];
+                let pieced: &Piecedata;
+                {
+                    pieced = &self.board[i];
+                }
                 if !pieced.is_alive{
                     continue;
                 }

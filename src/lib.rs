@@ -64,7 +64,7 @@ fn make_pawn(data: &Piecedata) -> Option<Pawn>{
     }
 }
 
-fn move_check_a(game: &mut Game, m: &Move) -> bool{
+fn move_check_a(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -95,35 +95,15 @@ fn move_check_a(game: &mut Game, m: &Move) -> bool{
     
     //In order to reduce the scope of the temp_game reference
     
-    piece_opt = game.piece_at_pos(&m.start_pos);
-    
-    match piece_opt{
-        None => return false,//No piece found
-        Some(piece) => {//Piece found
-            if piece.is_white != white_turn{//Check for incorrect "color"
-            return false
-        }
-        if !piece.is_alive{
-            return false;//Piece dead
+    if white_turn == game.piece_at_pos_is_white(&m.start_pos){
+        return false;
+    }
+    if game.piece_at_pos_bool(&m.end_pos){
+        if white_turn != game.piece_at_pos_is_white(&m.end_pos){
+            return false;
         }
     }
-}
-let piece = piece_opt.unwrap();
-piece_opt = game.piece_at_pos(&m.end_pos);
-
-//Since a None value would have returned false by now, we can unwrap and store the piecedata to be moved
-
-//Find the piece at the target position
-match piece_opt{
-    Some(target) => {
-        if target.is_white == piece.is_white{
-            //Attacking own team
-            return false
-        }
-    },
-    None => ()
-}
-return true;
+    true
 }
 
 fn move_check_b(game: &mut Game, n: &Move) -> bool{
@@ -139,17 +119,19 @@ fn move_check_b(game: &mut Game, n: &Move) -> bool{
         let board = &mut game.board;
         if attacker_board_index > target_board_index{
             let (target_component, attacker_component) = board.split_at_mut(attacker_board_index.unwrap()+1);
-            let target: &mut Piecedata;
             for maybe_target in target_component{
                 if maybe_target.position.to_string() == m.end_pos.to_string(){
                     for maybe_attacker in attacker_component{
                         if maybe_attacker.position.to_string() == m.start_pos.to_string(){
                             maybe_target.is_alive = false;
-
+                            
                             maybe_attacker.position = m.end_pos.clone();
+                            
+                            checked = game.check_for_check(maybe_attacker.is_white);
+                            break;
                         }
                     }
-
+                    
                     break;
                 }
             }
@@ -517,6 +499,21 @@ impl King {
                 }
                 false
             }
+
+            pub fn piece_at_pos_is_white(&self, pos: &Position) -> bool{
+                let board = &self.board;
+                let length = board.len();
+                for i in 0..length{
+                    if !(&board)[i].is_alive{
+                        continue;
+                    }
+                    if pos.to_string() == board[i].position.to_string() {
+                        return board[i].is_white;
+                    }
+                }
+                eprintln!("ERR: Piece at pos is white-function can't find piecedata with correct position");
+                false
+            }
             
             pub fn index_of_piece_in_board(&self, pos: &Position) -> Option<usize>{
                 let board = &self.board;
@@ -623,6 +620,10 @@ impl King {
                     }
                 }
                 //We have checked every piece. If noone can kill the king, the king is not in check.
+                false
+            }
+            
+            fn check_for_check_board(board: &mut Vec<Piecedata>, check_white_king: bool) -> bool{
                 false
             }
         }

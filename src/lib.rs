@@ -106,37 +106,56 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
     true
 }
 
-fn move_check_b(game: &mut Game, n: &Move) -> bool{
+fn move_check_b(game: &Game, n: &Move) -> bool{
     let m:Move = Move::new(n.start_pos.clone(),n.end_pos.clone());
     //Try the move
     let target_exists = game.piece_at_pos_bool(&m.end_pos);
     let checked: bool;
+    let mut temp_game: Game = game.clone();
     
     if target_exists {
         //There is a piece at the target
-        let attacker_board_index = &game.index_of_piece_in_board(&m.start_pos);
-        let target_board_index = &game.index_of_piece_in_board(&m.end_pos);
-        let board = &mut game.board;
-        if attacker_board_index > target_board_index{
-            let (target_component, attacker_component) = board.split_at_mut(attacker_board_index.unwrap()+1);
-            for maybe_target in target_component{
-                if maybe_target.position.to_string() == m.end_pos.to_string(){
-                    for maybe_attacker in attacker_component{
-                        if maybe_attacker.position.to_string() == m.start_pos.to_string(){
-                            maybe_target.is_alive = false;
-                            
-                            maybe_attacker.position = m.end_pos.clone();
-                            
-                            checked = game.check_for_check(maybe_attacker.is_white);
-                            break;
+        let attacker_board_index = &temp_game.index_of_piece_in_board(&m.start_pos);
+        let target_board_index = &temp_game.index_of_piece_in_board(&m.end_pos);
+        let mut attacker_white: bool = true;
+        {
+            let board = &mut temp_game.board;
+            if attacker_board_index > target_board_index{
+                let (target_component, attacker_component) = board.split_at_mut(attacker_board_index.unwrap()+1);
+                for maybe_target in target_component{
+                    if maybe_target.position.to_string() == m.end_pos.to_string(){
+                        for maybe_attacker in attacker_component{
+                            if maybe_attacker.position.to_string() == m.start_pos.to_string(){
+                                maybe_target.is_alive = false;
+                                
+                                maybe_attacker.position = m.end_pos.clone();
+                                attacker_white = maybe_attacker.is_white;
+                                break;
+                            }
                         }
+                        
+                        break;
                     }
-                    
-                    break;
+                }
+            }else {
+                let (attacker_component, target_component) = board.split_at_mut(target_board_index.unwrap()+1);
+                for maybe_target in target_component{
+                    if maybe_target.position.to_string() == m.end_pos.to_string(){
+                        for maybe_attacker in attacker_component{
+                            if maybe_attacker.position.to_string() == m.start_pos.to_string(){
+                                maybe_target.is_alive = false;
+                                
+                                maybe_attacker.position = m.end_pos.clone();
+                                attacker_white = maybe_attacker.is_white;
+                                break;
+                            }
+                        }
+                        
+                        break;
+                    }
                 }
             }
-        }else {
-            let (attacker_component, target_component) = board.split_at_mut(target_board_index.unwrap()+1);
+            checked = temp_game.check_for_check(attacker_white);
         }
         /*let mut target = game.piece_at_pos(&m.end_pos).unwrap();
         target.is_alive = false;
@@ -169,7 +188,9 @@ trait Piece {
     
     fn is_alive(&self) -> bool;
     
-    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool;
+    fn is_move_allowed(self, game: &Game, m: Move) -> bool;
+
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool;
     
     fn doMove(self, g: &Game, m: Move);
 }
@@ -260,9 +281,9 @@ impl Piece for Pawn {
         self.piece.is_alive
     }
     
-    fn is_move_allowed(self, game: &mut Game, m: Move) -> bool{
+    fn is_move_allowed(self, game: &Game, m: Move) -> bool{
         //Boiler plate
-        if !move_check_a(&mut game, &m) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -295,6 +316,40 @@ impl Piece for Pawn {
         return move_check_b(game, &m);
         //Return result from checkCheck
     }
+
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+        //Boiler plate
+        if !move_check_a(&mut game, &m) {
+            return false
+        }
+        
+        //Unique code for pawn movement
+        if distance(m.start_pos.y, m.end_pos.y) == 2 && distance(m.start_pos.x,m.end_pos.x) == 0{
+            //Initial double step
+            if self.moved{
+                return false
+            }
+            let avg_y: u8 = (m.start_pos.y + m.end_pos.y)/2; 
+            match game.piece_at_pos(&m.end_pos){
+                Some(_) => return false,
+                None => ()
+            }
+            let temp_pos: Position = Position::new(m.start_pos.x, avg_y);
+            match game.piece_at_pos(&temp_pos) {
+                Some(_) => return false,
+                None => ()
+            }
+            
+        }
+        //TODO fix
+        if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
+            return false
+        }
+        
+        //Check intermediary positions
+        //-No intermediary positions for regular pawn movement
+        true
+    }
     
     fn doMove(mut self, g: &Game, m: Move){
         let killed_piece = g.piece_at_pos(&m.end_pos);
@@ -313,16 +368,7 @@ struct King {
 }
 
 impl King {
-    // fn is_checked(board: Game) -> bool{
-        //     //Isn't this just a wack checkChecker?
-        //     false
-        // }
     }
-    
-    //Testing function
-    // fn ahepp(k: King, g: &Game, m: Move)->bool{
-        //     return move_check_a(g,&m);
-        // }
         
         impl Piece for King {
             
@@ -335,7 +381,7 @@ impl King {
                 self.piece.is_alive
             }
             
-            fn is_move_allowed(self, game: &mut Game, m: Move) -> bool{
+            fn is_move_allowed(self, game: &Game, m: Move) -> bool{
                 //A king should never move more than one step in any direction in one move¨
                 //Except for castling, which can be added later.
                 
@@ -357,6 +403,28 @@ impl King {
                 move_check_b(game,&m)
                 //Return result from checkCheck
             }
+
+            fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+                //A king should never move more than one step in any direction in one move¨
+                //Except for castling, which can be added later.
+                
+                //Boiler plate
+                if !move_check_a(game, &m) {
+                    return false
+                }
+                
+                //Unique code for king movement
+                if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
+                    return false
+                }
+                
+                //Write castling code here
+                
+                //Check intermediary positions
+                //-No intermediary positions for regular king movement
+                
+                true
+            }
             
             fn doMove(mut self, g: &Game, m: Move){
                 let killed_piece = g.piece_at_pos(&m.end_pos);
@@ -375,6 +443,19 @@ impl King {
         }
         
         impl Game {
+            
+            pub fn clone(&self) -> Game{
+                let mut vec:Vec<Piecedata> = Vec::with_capacity(32);
+                for i in 0..self.board.len() {
+                    vec.push(self.board[i].clone());
+                }
+
+                return Game {
+                    state: self.get_game_state(),
+                    white_turn: self.white_turn,
+                    board: vec
+                }
+            }
             /// Initialises a new board with pieces.
             pub fn new() -> Game {
                 /* initialise board, set active colour to white, ... */
@@ -499,7 +580,7 @@ impl King {
                 }
                 false
             }
-
+            
             pub fn piece_at_pos_is_white(&self, pos: &Position) -> bool{
                 let board = &self.board;
                 let length = board.len();
@@ -553,15 +634,21 @@ impl King {
             
             //TODO: Make this return an option of vec of checking pieces (or positions)
             //In order to be able to check for checkmate
-            fn check_for_check(&mut self, check_white_king: bool) -> bool{
+            fn check_for_check(&self, check_white_king: bool) -> bool{
                 //true means that the king of the specified color is in check.
                 //let mut_ref_game = self;
+                let mut temp_game = self.clone();
+                let board = &mut temp_game.board;
+                self.check_for_check_board(board, check_white_king)
+            }
+            
+            fn check_for_check_board(&self, board: &mut Vec<Piecedata>, check_white_king: bool) -> bool{
                 if check_white_king{
                     //Check all black pieces
                     for i in 16..32{
                         let pieced: &Piecedata;
                         {
-                            pieced = &self.board[i];
+                            pieced = &board[i];
                         }
                         if !pieced.is_alive{
                             continue;
@@ -569,18 +656,18 @@ impl King {
                         //Create a move from the attacking piece to the king, which we want to know the check-status of
                         let temp_move: Move = Move::new(
                             pieced.position.clone(),
-                            self.board[4].position.clone());//king pos
+                            board[4].position.clone());//king pos
                             let variant: &str = &pieced.variant;
                             match variant {//Convert the Piecedata instance into it's struct
                             //Then check if the move is allowed
                             //If it is, the king is in check
                             "king" => {
-                                if make_king(&pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                                     return true    
                                 }
                             },
                             "pawn" => {
-                                if make_pawn(&pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                                     return true    
                                 }
                             },
@@ -592,25 +679,25 @@ impl King {
                 else{
                     //Check all white pieces
                     for i in 0..16{
-                        let pieced = &self.board[i];
+                        let pieced = &board[i];
                         if !pieced.is_alive{
                             continue;
                         }
                         //Create a move from the attacking piece to the king, which we want to know the check-status of
                         let temp_move: Move = Move::new(
                             pieced.position.clone(),
-                            self.board[20].position.clone());//king pos
+                            board[20].position.clone());//king pos
                             let variant: &str = &pieced.variant;
                             match variant {//Convert the Piecedata instance into it's struct
                             //Then check if the move is allowed
                             //If it is, the king is in check
                             "king" => {
-                                if make_king(&pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                                     return true    
                                 }
                             }
                             "pawn" => {
-                                if make_pawn(&pieced).unwrap().is_move_allowed(self, temp_move) {
+                                if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                                     return true    
                                 }
                             }
@@ -620,10 +707,6 @@ impl King {
                     }
                 }
                 //We have checked every piece. If noone can kill the king, the king is not in check.
-                false
-            }
-            
-            fn check_for_check_board(board: &mut Vec<Piecedata>, check_white_king: bool) -> bool{
                 false
             }
         }

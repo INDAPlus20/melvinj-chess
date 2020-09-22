@@ -43,9 +43,6 @@ impl Piecedata {
     fn new(position: Position, is_white: bool, variant: String) -> Self{
         Piecedata {position: position, is_alive: true, is_white: is_white, variant: variant, enpassantable: false, moved: false}
     }
-    fn specific_new(position: Position, is_alive: bool, is_white: bool, variant: String, enpassantable: bool, moved: bool) -> Self{
-        Piecedata {position: position, is_alive: is_alive, is_white: is_white, variant: variant, enpassantable: false, moved: false}
-    }
 }
 
 fn make_king(data: &Piecedata) -> Option<King>{
@@ -76,22 +73,22 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
     */
     
     //Check if all positions are in bounds
-    if m.start_pos.x < 0 || m.start_pos.x > 7 {
+    if m.start_pos.x > 7 {
         return false
     }
-    if m.start_pos.y < 0 || m.start_pos.y > 7{
+    if m.start_pos.y > 7{
         return false
     }
-    if m.end_pos.x < 0 || m.end_pos.x > 7 {
+    if m.end_pos.x > 7 {
         return false
     }
-    if m.end_pos.y < 0 || m.end_pos.y > 7{
+    if m.end_pos.y > 7{
         return false
     }
     
     //Find the piece to be moved
     let white_turn = game.white_turn;
-    let mut piece_opt:Option<&mut Piecedata>;
+    //let mut piece_opt:Option<&mut Piecedata>;
     
     //In order to reduce the scope of the temp_game reference
     
@@ -217,13 +214,13 @@ impl Move {
         Move {start_pos: p1, end_pos: p2}
     }
     
-    fn to_string_vec(&self) -> Vec<String>{
+    /*fn to_string_vec(&self) -> Vec<String>{
         //Returns the move in string form, eg. a2-a3
         let mut vec: Vec<String> = Vec::new();
         vec.push(self.start_pos.to_string());
         vec.push(self.end_pos.to_string());
         vec
-    }
+    }*/
 }
 
 #[derive(Clone)]
@@ -270,14 +267,13 @@ impl Position {
 }
 
 struct Pawn {
-    piece: Piecedata,
-    moved: bool
+    piece: Piecedata
 }
 
 impl Piece for Pawn {
     fn new(position: Position, is_white: bool) -> Self {
         let piecedata = Piecedata::new(position, is_white, String::from("pawn"));
-        Pawn {piece: piecedata, moved: false}
+        Pawn {piece: piecedata}
     }
     
     fn is_alive(&self)->bool{
@@ -402,7 +398,7 @@ impl King {
                     board:Vec::new()
                 };
                 
-                let realgame = game.createPieces();
+                let realgame = game.create_pieces();
                 return realgame;
                 
             }
@@ -423,7 +419,7 @@ impl King {
                 self.state
             }
             
-            fn createPieces(mut self) -> Game{
+            fn create_pieces(mut self) -> Game{
                 //Generate all pieces at default starting positions
                 //This is ugly, but it should work
                 self.board.push(Piecedata::new(Position::new(0,0),true,String::from("rook")));
@@ -550,7 +546,7 @@ impl King {
                 None
             }
             
-            fn print_game_state(&self){
+            pub fn print_game_state(&self){
                 //Prints the current game state into the console
                 let mut board: Vec<Piecedata> = Vec::new();
                 board.clone_from_slice(&(self.board));

@@ -28,7 +28,7 @@ pub struct Game {
 }
 
 #[derive(Clone)]
-struct Piecedata {
+pub struct Piecedata {
     //Struct containing data for pieces
     position: Position,
     is_alive: bool,
@@ -227,7 +227,7 @@ impl Move {
 }
 
 #[derive(Clone)]
-struct Position {
+pub struct Position {
     x: u8,
     y: u8
 }
@@ -285,72 +285,25 @@ impl Piece for Pawn {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+            return false
+        }
+        
+        return move_check_b(game,&m)
+        //Return result from checkCheck
+    }
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+        
         //Boiler plate
         if !move_check_a(game, &m) {
             return false
         }
         
-        //Unique code for pawn movement
-        if distance(m.start_pos.y, m.end_pos.y) == 2 && distance(m.start_pos.x,m.end_pos.x) == 0{
-            //Initial double step
-            if self.moved{
-                return false
-            }
-            let avg_y: u8 = (m.start_pos.y + m.end_pos.y)/2; 
-            match game.piece_at_pos(&m.end_pos){
-                Some(_) => return false,
-                None => ()
-            }
-            let temp_pos: Position = Position::new(m.start_pos.x, avg_y);
-            match game.piece_at_pos(&temp_pos) {
-                Some(_) => return false,
-                None => ()
-            }
-            
-        }
-        //TODO fix
-        if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
-            return false
-        }
+        //Unique code for piece movement
         
         //Check intermediary positions
-        //-No intermediary positions for regular pawn movement
         
-        return move_check_b(game, &m);
-        //Return result from checkCheck
-    }
-
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
-        //Boiler plate
-        if !move_check_a(&mut game, &m) {
-            return false
-        }
-        
-        //Unique code for pawn movement
-        if distance(m.start_pos.y, m.end_pos.y) == 2 && distance(m.start_pos.x,m.end_pos.x) == 0{
-            //Initial double step
-            if self.moved{
-                return false
-            }
-            let avg_y: u8 = (m.start_pos.y + m.end_pos.y)/2; 
-            match game.piece_at_pos(&m.end_pos){
-                Some(_) => return false,
-                None => ()
-            }
-            let temp_pos: Position = Position::new(m.start_pos.x, avg_y);
-            match game.piece_at_pos(&temp_pos) {
-                Some(_) => return false,
-                None => ()
-            }
-            
-        }
-        //TODO fix
-        if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
-            return false
-        }
-        
-        //Check intermediary positions
-        //-No intermediary positions for regular pawn movement
+        //Everything except placing one's own king in check controlled.
         true
     }
     

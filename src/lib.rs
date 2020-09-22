@@ -168,13 +168,16 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
         
         target.is_alive = true;*/
     }else{
-        game.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos.clone();
+        let mut temp_game = game.clone();
+
+        let is_white = temp_game.piece_at_pos(&m.end_pos).unwrap().is_white;
         
+        temp_game.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos.clone();
         
-        checked = game.check_for_check(game.piece_at_pos(&m.end_pos).unwrap().is_white);
+        checked = temp_game.check_for_check(is_white);
         
         //Revert (this function is only for checking if the move is valid)
-        game.piece_at_pos(&m.end_pos).unwrap().position = m.start_pos.clone();
+        temp_game.piece_at_pos(&m.end_pos).unwrap().position = m.start_pos.clone();
         
     }
     checked
@@ -521,7 +524,9 @@ impl King {
             /// (optional) Don't forget to include en passent and castling.
             pub fn get_possible_moves(self, position: Position) -> Option<Vec<Position>> {
                 let mut vec:Vec<Position> = Vec::new();
-                match self.piece_at_pos(&position){
+                let mut temp_game = self.clone();
+                let mut identical_game = temp_game.clone();
+                match identical_game.piece_at_pos(&position){
                     Some(piece) => {
                         for x in 0..8{
                             for y in 0..8{
@@ -532,17 +537,18 @@ impl King {
                                 let temp_move = Move::new(position.clone(), Position::new(x,y));
                                 match variant{
                                     "king" => {
-                                        if make_king(&piece).unwrap().is_move_allowed(&mut self, temp_move) {
+                                        if make_king(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                             vec.push(Position::new(x,y));
                                         }
                                     }
                                     "pawn" => {
-                                        if make_pawn(&piece).unwrap().is_move_allowed(&mut self, temp_move) {
+                                        if make_pawn(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                             vec.push(Position::new(x,y));   
                                         }
                                     }
                                     _ => ()
                                 }
+                                break;
                             }
                         }
                     }

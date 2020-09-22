@@ -385,47 +385,28 @@ impl King {
             }
             
             fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-                //A king should never move more than one step in any direction in one move¨
-                //Except for castling, which can be added later.
-                
-                //Boiler plate
-                if !move_check_a(game, &m) {
+                if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
                     return false
                 }
                 
-                //Unique code for king movement
-                if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
-                    return false
-                }
-                
-                //Write castling code here
-                
-                //Check intermediary positions
-                //-No intermediary positions for regular king movement
-                
-                move_check_b(game,&m)
+                return move_check_b(game,&m)
                 //Return result from checkCheck
             }
-
             fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
-                //A king should never move more than one step in any direction in one move¨
-                //Except for castling, which can be added later.
                 
                 //Boiler plate
                 if !move_check_a(game, &m) {
                     return false
                 }
                 
-                //Unique code for king movement
+                //Unique code for piece movement
                 if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
                     return false
                 }
                 
-                //Write castling code here
-                
                 //Check intermediary positions
-                //-No intermediary positions for regular king movement
                 
+                //Everything except placing one's own king in check controlled.
                 true
             }
             

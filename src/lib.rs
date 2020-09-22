@@ -192,7 +192,7 @@ trait Piece {
 
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool;
     
-    fn doMove(self, g: &Game, m: Move);
+    fn do_move(self, g: &mut Game, m: Move);
 }
 
 struct Move {
@@ -351,7 +351,7 @@ impl Piece for Pawn {
         true
     }
     
-    fn doMove(mut self, g: &Game, m: Move){
+    fn do_move(mut self, g: &mut Game, m: Move){
         let killed_piece = g.piece_at_pos(&m.end_pos);
         match killed_piece{
             //Kill the target, if it exists
@@ -426,7 +426,7 @@ impl King {
                 true
             }
             
-            fn doMove(mut self, g: &Game, m: Move){
+            fn do_move(mut self, g: &mut Game, m: Move){
                 let killed_piece = g.piece_at_pos(&m.end_pos);
                 match killed_piece{
                     //Kill the target, if it exists

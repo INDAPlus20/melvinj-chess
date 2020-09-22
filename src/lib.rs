@@ -472,8 +472,10 @@ impl King {
                 let checked = self.check_for_check(self.white_turn);
                 if checked{
                     let mut temp_game = self.clone();
-                    let offset: usize = if temp_game.white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
-                    for i in 0+offset..16+offset{
+                    let white_turn = temp_game.white_turn;
+                    let mut checkmate = true;
+                    let offset: usize = if white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
+                    'piece: for i in 0+offset..16+offset{
                         for x in 0..8{
                             for y in 0..8{
                                 if temp_game.board[i].position.clone().to_string() == Position::new(x,y).to_string(){
@@ -481,12 +483,20 @@ impl King {
                                 }
                                 //let m: Move = Move::new(temp_game.board[i].position.clone(),Position::new(x,y));
                                 temp_game.make_move(temp_game.board[i].position.clone(),Position::new(x,y));
+                                if !temp_game.check_for_check(white_turn){
+                                    checkmate = false;
+                                    break 'piece;
+                                }
                             }
                         }
                     }
+                    if checkmate{
+                        return GameState::GameOver;
+                    }else{
+                        return GameState::Check;
+                    }
                 }
-                //Return it
-                self.state
+                GameState::InProgress
             }
             
             fn create_pieces(mut self) -> Game{

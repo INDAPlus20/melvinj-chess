@@ -8,6 +8,8 @@ pub mod movecheck;//I can't figure out how to use this properly
 //This will be entirely written in 1 file
 //If this ever gets close to working order I will probably start over
 
+//Keyword: probably
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum GameState {
     InProgress,
@@ -260,6 +262,13 @@ impl Position {
         
         string
     }
+
+    fn are_identical(&self, pos: &Position) -> bool{
+        if self.x == pos.x && self.y == pos.y{
+            return true
+        }
+        false
+    }
     
     pub fn clone(&self)->Position{
         Position::new(self.x,self.y)
@@ -406,6 +415,22 @@ impl King {
             /// If the current game state is InProgress and the move is legal, 
             /// move a piece and return the resulting state of the game.
             pub fn make_move(&mut self, from: Position, to: Position) -> Option<GameState> {
+                let maybe_vec = (&self).get_possible_moves(from.clone());
+                let mut move_allowed:bool = false;
+                match maybe_vec{
+                    None => return None,
+                    Some(v) => {
+                        for element in v{
+                            if element.are_identical(&to){
+                                move_allowed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if !move_allowed{
+                    return None;
+                }
                 let m: Move = Move::new(from.clone(),to);
                 match self.piece_at_pos(&from){
                     None => return None,//No piece at position, can't make move
@@ -416,16 +441,16 @@ impl King {
                             //Then check if the move is allowed
                             //If it is, the king is in check
                             "king" => {
-                                if make_king(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
-                                    make_king(&cloned_piece).unwrap().do_move(self, m);
-                                    return Some(self.get_game_state());
-                                }
+                                //if make_king(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
+                                make_king(&cloned_piece).unwrap().do_move(self, m);
+                                self.white_turn = !self.white_turn;
+                                return Some(self.get_game_state());
+                                //}
                             }
                             "pawn" => {
-                                if make_pawn(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
-                                    make_pawn(&cloned_piece).unwrap().do_move(self, m);
-                                    return Some(self.get_game_state());
-                                }
+                                make_pawn(&cloned_piece).unwrap().do_move(self, m);
+                                self.white_turn = !self.white_turn;
+                                return Some(self.get_game_state());
                             }
                             _ => ()
                         }
@@ -443,6 +468,24 @@ impl King {
             
             /// Get the current game state.
             pub fn get_game_state(&self) -> GameState {
+                //Generate the GameState
+                let checked = self.check_for_check(self.white_turn);
+                if checked{
+                    let mut temp_game = self.clone();
+                    let offset: usize = if temp_game.white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
+                    for i in 0+offset..16+offset{
+                        for x in 0..8{
+                            for y in 0..8{
+                                if temp_game.board[i].position.clone().to_string() == Position::new(x,y).to_string(){
+                                    continue;
+                                }
+                                //let m: Move = Move::new(temp_game.board[i].position.clone(),Position::new(x,y));
+                                temp_game.make_move(temp_game.board[i].position.clone(),Position::new(x,y));
+                            }
+                        }
+                    }
+                }
+                //Return it
                 self.state
             }
             
@@ -479,7 +522,7 @@ impl King {
             /// new positions of that piece. Don't forget to the rules for check. 
             /// 
             /// (optional) Don't forget to include en passent and castling.
-            pub fn get_possible_moves(self, position: Position) -> Option<Vec<Position>> {
+            pub fn get_possible_moves(&self, position: Position) -> Option<Vec<Position>> {
                 let mut vec:Vec<Position> = Vec::new();
                 let mut temp_game = self.clone();
                 let mut identical_game = temp_game.clone();

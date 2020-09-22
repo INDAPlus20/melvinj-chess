@@ -405,8 +405,35 @@ impl King {
             
             /// If the current game state is InProgress and the move is legal, 
             /// move a piece and return the resulting state of the game.
-            pub fn make_move(&mut self, _from: String, _to: String) -> Option<GameState> {
+            pub fn make_move(&mut self, from: Position, to: Position) -> Option<GameState> {
+                let m: Move = Move::new(from.clone(),to);
+                match self.piece_at_pos(&from){
+                    None => return None,//No piece at position, can't make move
+                    Some(piece) => {
+                        let cloned_piece = piece.clone();
+                        let literal_variant: &str = &piece.variant;
+                        match literal_variant {//Convert the Piecedata instance into it's struct
+                            //Then check if the move is allowed
+                            //If it is, the king is in check
+                            "king" => {
+                                if make_king(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
+                                    make_king(&cloned_piece).unwrap().do_move(self, m);
+                                    return Some(self.get_game_state());
+                                }
+                            }
+                            "pawn" => {
+                                if make_pawn(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
+                                    make_pawn(&cloned_piece).unwrap().do_move(self, m);
+                                    return Some(self.get_game_state());
+                                }
+                            }
+                            _ => ()
+                        }
+                    } 
+                }
+
                 None
+                
             }
             
             /// Set the piece type that a peasant becames following a promotion.

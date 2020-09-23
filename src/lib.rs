@@ -39,13 +39,13 @@ pub struct Piecedata {
     is_white: bool,
     variant: String,
     moved: bool,
-    enpassantable: bool
+    enpassantable: u8
 }
 
 impl Piecedata {
     //Constructor for Piecedata
     fn new(position: Position, is_white: bool, variant: String) -> Self{
-        Piecedata {position: position, is_alive: true, is_white: is_white, variant: variant, enpassantable: false, moved: false}
+        Piecedata {position: position, is_alive: true, is_white: is_white, variant: variant, enpassantable: 0, moved: false}
     }
 }
 
@@ -339,7 +339,7 @@ impl Piece for Pawn {
                         //En passant
                         match temp_game.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
                             Some(enpassant) => {
-                                if enpassant.enpassantable{
+                                if enpassant.enpassantable > 0{
                                     return true
                                     //There is a bug in this implementation
                                     //Since the enpassantable pawn does not disappear in move_check_b for check_checking
@@ -356,6 +356,10 @@ impl Piece for Pawn {
                 }
             }else if m.end_pos.x != m.start_pos.x{
                 return false;
+            }else{
+                if m.end_pos.y == if game.white_turn {7} else {0}{
+                    //promotion    
+                }
             }
         }
         return true
@@ -375,14 +379,13 @@ impl Piece for Pawn {
                             //En passant
                             match g.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
                                 Some(enpassant) => {
-                                    if enpassant.enpassantable{
-                                        if enpassant.enpassantable{
-                                            enpassant.is_alive = false;
-                                            g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
-                                            self.piece.moved = true;
-                                            return
-                                        }
+                                    if enpassant.enpassantable > 0{
+                                        enpassant.is_alive = false;
+                                        g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
+                                        self.piece.moved = true;
+                                        return
                                     }
+                                    
                                     
                                 }
                                 None => eprintln!("ERR: NO ENPASSANTABLE PIECE IN do_move!")
@@ -491,6 +494,15 @@ impl King {
                 return realgame;
                 
             }
+
+            fn next_turn(&mut self){
+                self.white_turn = !self.white_turn;
+                for i in 0..32{
+                    if self.board[i].enpassantable > 0{
+                        self.board[i].enpassantable -= 1;
+                    }
+                }
+            }
             
             /// If the current game state is InProgress and the move is legal, 
             /// move a piece and return the resulting state of the game.
@@ -523,13 +535,13 @@ impl King {
                             "king" => {
                                 //if make_king(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
                                 make_king(&cloned_piece).unwrap().do_move(self, m);
-                                self.white_turn = !self.white_turn;
+                                self.next_turn();
                                 return Some(self.get_game_state());
                                 //}
                             }
                             "pawn" => {
                                 make_pawn(&cloned_piece).unwrap().do_move(self, m);
-                                self.white_turn = !self.white_turn;
+                                self.next_turn();
                                 return Some(self.get_game_state());
                             }
                             _ => ()

@@ -1,7 +1,8 @@
 use std::fmt;
 use std::collections::HashMap;
 
-pub mod movecheck;//I can't figure out how to use this properly
+//pub mod movecheck;
+//I can't figure out how to use this properly
 //Where to put structs etc.
 
 //Chess attempt #1
@@ -24,7 +25,8 @@ pub enum GameState {
 
 pub struct Game {
     /* save board, active colour, ... */
-    state: GameState,
+    //state: GameState,
+    //why store state when you can just compute it!
     white_turn: bool,
     board: Vec<Piecedata>
 }
@@ -305,14 +307,93 @@ impl Piece for Pawn {
         }
         
         //Unique code for piece movement
+
+        if (m.start_pos.y < m.end_pos.y) != game.white_turn{
+            return false;//Moving in the wrong direction
+        }
+
+        //Double-step
+        if distance(m.start_pos.y, m.end_pos.y) == 2{
+            if self.piece.moved{
+                return false;
+            }
+            if distance(m.start_pos.x, m.end_pos.x) != 0{
+                //Askew with double step == nono
+                return false;
+            }
+            let mut temp_game = game.clone();
+            match temp_game.piece_at_pos(&Position::new(m.start_pos.x,(m.start_pos.y+m.end_pos.y)/2)){//Position being stepped over
+                Some(_) => return false,
+                None => ()
+            }
+            match temp_game.piece_at_pos(&m.end_pos){
+                Some(_) => return false,
+                None => ()
+            }
+        }else if distance(m.start_pos.y, m.end_pos.y) == 1{
+            if distance(m.start_pos.x, m.end_pos.x) == 1{
+                //Attacking
+                let mut temp_game = game.clone();
+                match temp_game.piece_at_pos(&m.end_pos){
+                    None => {
+                        //En passant
+                        match temp_game.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
+                            Some(enpassant) => {
+                                if enpassant.enpassantable{
+                                    return true
+                                    //There is a bug in this implementation
+                                    //Since the enpassantable pawn does not disappear in move_check_b for check_checking
+                                    //It could allow some move which is actually illegal
+                                    //This could be fixed by putting the sensing code into move_check_b and killing the pawn
+                                }
+                            },
+                            None => ()
+                        }
+                        //En passant but no enpassantable piece
+                        return false;
+                    }
+                    Some(_) => ()//Controlls for this movement done elsewhere
+                }
+            }else if m.end_pos.x != m.start_pos.x{
+                return false;
+            }
+        }
+        return true
         
         //Check intermediary positions
         
         //Everything except placing one's own king in check controlled.
-        true
     }
     
     fn do_move(mut self, g: &mut Game, m: Move){
+        if g.piece_at_pos(&m.start_pos).unwrap().variant == String::from("pawn"){
+            if distance(m.start_pos.y, m.end_pos.y) == 1{
+                if distance(m.start_pos.x, m.end_pos.x) == 1{
+                    //Attacking
+                    match g.piece_at_pos(&m.end_pos){
+                        None => {
+                            //En passant
+                            match g.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
+                                Some(enpassant) => {
+                                    if enpassant.enpassantable{
+                                        if enpassant.enpassantable{
+                                            enpassant.is_alive = false;
+                                            g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
+                                            self.piece.moved = true;
+                                            return
+                                        }
+                                    }
+                                    
+                                }
+                                None => eprintln!("ERR: NO ENPASSANTABLE PIECE IN do_move!")
+                            }
+                            
+                        }
+                        Some(_) => ()//Ehhh, not enpassant, is done further down in this function
+                    }
+                }
+            }
+        }
         let killed_piece = g.piece_at_pos(&m.end_pos);
         match killed_piece{
             //Kill the target, if it exists
@@ -321,6 +402,7 @@ impl Piece for Pawn {
         }
         g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
         self.piece.moved = true;
+        
     }
 }
 
@@ -393,7 +475,6 @@ impl King {
                 }
 
                 return Game {
-                    state: self.get_game_state(),
                     white_turn: self.white_turn,
                     board: vec
                 }
@@ -402,7 +483,6 @@ impl King {
             pub fn new() -> Game {
                 /* initialise board, set active colour to white, ... */
                 let game = Game {
-                    state: GameState::InProgress,
                     white_turn: true,
                     board:Vec::new()
                 };
@@ -468,7 +548,7 @@ impl King {
             
             /// Get the current game state.
             pub fn get_game_state(&self) -> GameState {
-                //Generate the GameState
+                //Compute the GameState
                 let checked = self.check_for_check(self.white_turn);
                 if checked{
                     let mut temp_game = self.clone();

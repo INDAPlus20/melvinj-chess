@@ -28,6 +28,7 @@ pub struct Game {
     //state: GameState,
     //why store state when you can just compute it!
     white_turn: bool,
+    awaiting_promotion: Option<Position>,
     board: Vec<Piecedata>
 }
 
@@ -358,7 +359,7 @@ impl Piece for Pawn {
                 return false;
             }else{
                 if m.end_pos.y == if game.white_turn {7} else {0}{
-                    //promotion    
+                    //promotion. We have a &-reference here, so done elsewhere for now
                 }
             }
         }
@@ -471,7 +472,7 @@ impl King {
         
         impl Game {
             
-            pub fn clone(&self) -> Game{
+            fn clone(&self) -> Game{
                 let mut vec:Vec<Piecedata> = Vec::with_capacity(32);
                 for i in 0..self.board.len() {
                     vec.push(self.board[i].clone());
@@ -479,6 +480,7 @@ impl King {
 
                 return Game {
                     white_turn: self.white_turn,
+                    awaiting_promotion: self.awaiting_promotion.clone(),
                     board: vec
                 }
             }
@@ -487,6 +489,7 @@ impl King {
                 /* initialise board, set active colour to white, ... */
                 let game = Game {
                     white_turn: true,
+                    awaiting_promotion: None,
                     board:Vec::new()
                 };
                 
@@ -540,8 +543,12 @@ impl King {
                                 //}
                             }
                             "pawn" => {
-                                make_pawn(&cloned_piece).unwrap().do_move(self, m);
-                                self.next_turn();
+                                make_pawn(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                                if m.end_pos.y == if self.white_turn {7} else {0}{
+                                    self.awaiting_promotion = Some(m.end_pos);
+                                }else{
+                                    self.next_turn();
+                                }
                                 return Some(self.get_game_state());
                             }
                             _ => ()
@@ -554,8 +561,30 @@ impl King {
             }
             
             /// Set the piece type that a peasant becames following a promotion.
-            pub fn set_promotion(&mut self, _piece: String) -> () {
-                ()
+            pub fn set_promotion(&mut self, piece: String) -> () {
+                match &self.awaiting_promotion{
+                    None => return,
+                    Some(position) => {
+                        let cloned_position = position.clone();
+                        match self.piece_at_pos(&cloned_position){
+                            None => eprintln!("ERR: Awaiting promotion for piece which is not at designated position"),
+                            Some(_) => {
+                                let promote_to: &str = &piece;
+                                match promote_to{
+                                    "king" => eprintln!("CANT PROMOTE PAWN TO KING"),
+                                    "pawn" => eprintln!("PAWN CAN'T BE PROMOTED TO ANOTHER PAWN, right?"),
+                                    "nkight" => {
+                                        //Transform the pawn to a nkight. 
+                                        //If success:
+                                        self.awaiting_promotion = None;
+                                        return
+                                    }
+                                    _ => eprintln!("CANT PROMOTE PAWN TO [object Object]")
+                                }
+                            }
+                        }
+                    }
+                }
             }
             
             /// Get the current game state.

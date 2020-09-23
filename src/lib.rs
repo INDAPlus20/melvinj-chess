@@ -81,6 +81,14 @@ fn make_pawn(data: &Piecedata) -> Option<Pawn>{
     }
 }
 
+fn make_rook(data: &Piecedata) -> Option<Rook>{
+    if data.variant == "rook"{ 
+        return Some(Rook::new(data.position.clone(),data.is_white))
+    }else {
+        None
+    }
+}
+
 fn move_check_a(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
@@ -606,15 +614,15 @@ impl Game {
                 let cloned_piece = piece.clone();
                 let literal_variant: &str = &piece.variant;
                 match literal_variant {//Convert the Piecedata instance into it's struct
-                //Then check if the move is allowed
-                //If it is, the king is in check
-                "king" => {
-                    //if make_king(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
+                    //Then check if the move is allowed
+                    //If it is, the king is in check
+                    "king" => {
+                        //if make_king(&cloned_piece).unwrap().is_move_allowed(&self, Move::new(m.start_pos.clone(),m.end_pos.clone())) {
                         make_king(&cloned_piece).unwrap().do_move(self, m);
                         self.next_turn();
                         return Some(self.get_game_state());
                         //}
-                    }
+                        }
                     "pawn" => {
                         make_pawn(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         if m.end_pos.y == if self.white_turn {7} else {0}{
@@ -622,6 +630,11 @@ impl Game {
                         }else{
                             self.next_turn();
                         }
+                        return Some(self.get_game_state());
+                    }
+                    "rook" => {
+                        make_rook(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        self.next_turn();
                         return Some(self.get_game_state());
                     }
                     _ => ()
@@ -641,15 +654,26 @@ impl Game {
                 let cloned_position = position.clone();
                 match self.piece_at_pos(&cloned_position){
                     None => eprintln!("ERR: Awaiting promotion for piece which is not at designated position"),
-                    Some(_) => {
+                    Some(pawn) => {
                         let promote_to: &str = &piece;
                         match promote_to{
                             "king" => eprintln!("CANT PROMOTE PAWN TO KING"),
                             "pawn" => eprintln!("PAWN CAN'T BE PROMOTED TO ANOTHER PAWN, right?"),
+                            /*variant => {
+                                Feel free to swap this for following cases
+                                Could lead to illegal variants without proper support
+                                pawn.variant = String::from(variant);
+                                self.next_turn();
+                            }*/
+                            "rook" => {
+                                pawn.variant = String::from("rook");
+                                self.next_turn();
+                            },
                             "nkight" => {
                                 //Transform the pawn to a nkight. 
                                 //If success:
                                 self.awaiting_promotion = None;
+                                self.next_turn();
                                 return
                             }
                             _ => eprintln!("CANT PROMOTE PAWN TO [object Object]")
@@ -751,6 +775,11 @@ impl Game {
                             }
                             "pawn" => {
                                 if make_pawn(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                    vec.push(Position::new(x,y));   
+                                }
+                            }
+                            "rook" => {
+                                if make_rook(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y));   
                                 }
                             }
@@ -885,7 +914,12 @@ impl Game {
                         if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                             return true    
                         }
-                    },
+                    }
+                    "rook" => {
+                        if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            return true    
+                        }
+                    }
                     _ => ()
                 }
                 
@@ -913,6 +947,11 @@ impl Game {
                     }
                     "pawn" => {
                         if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            return true    
+                        }
+                    }
+                    "rook" => {
+                        if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                             return true    
                         }
                     }

@@ -1,5 +1,4 @@
 use std::fmt;
-use std::collections::HashMap;
 
 //pub mod movecheck;
 //I can't figure out how to use this properly
@@ -113,6 +112,39 @@ fn make_nkight(data: &Piecedata) -> Option<Nkight>{
     }
 }
 
+fn string_to_pos(string: String)->Position{
+    if string.len() != 2{
+        panic!()//Wrong string length
+    }else{
+        let pos_x: u8;
+        let pos_y: u8;
+        let mut whatnot = string.chars();
+        match whatnot.next().unwrap(){
+            'a' => pos_x = 0,
+            'b' => pos_x = 1,
+            'c' => pos_x = 2,
+            'd' => pos_x = 3,
+            'e' => pos_x = 4,
+            'f' => pos_x = 5,
+            'g' => pos_x = 6,
+            'h' => pos_x = 7,
+            _ => panic!()
+        }
+        match whatnot.next().unwrap(){
+            '1' => pos_y = 0,
+            '2' => pos_y = 1,
+            '3' => pos_y = 2,
+            '4' => pos_y = 3,
+            '5' => pos_y = 4,
+            '6' => pos_y = 5,
+            '7' => pos_y = 6,
+            '8' => pos_y = 7,
+            _ => panic!()
+        }
+        return Position::new(pos_x,pos_y);
+    }
+}
+
 fn move_check_a(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
@@ -137,6 +169,8 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
     if m.end_pos.y > 7{
         return false
     }
+
+    
     
     //Find the piece to be moved
     let white_turn = game.white_turn;
@@ -144,7 +178,7 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
     
     //In order to reduce the scope of the temp_game reference
     
-    if white_turn == game.piece_at_pos_is_white(&m.start_pos){
+    if white_turn != game.piece_at_pos_is_white(&m.start_pos){
         return false;
     }
     if game.piece_at_pos_bool(&m.end_pos){
@@ -219,7 +253,7 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
     }else{
         let mut temp_game = game.clone();
         
-        let is_white = temp_game.piece_at_pos(&m.end_pos).unwrap().is_white;
+        let is_white = temp_game.piece_at_pos_is_white(&m.start_pos);
         
         temp_game.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos.clone();
         
@@ -229,7 +263,7 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
         temp_game.piece_at_pos(&m.end_pos).unwrap().position = m.start_pos.clone();
         
     }
-    checked
+    !checked
 }
 
 
@@ -363,6 +397,7 @@ impl Piece for Pawn {
                 //Askew with double step == nono
                 return false;
             }
+            
             let mut temp_game = game.clone();
             match temp_game.piece_at_pos(&Position::new(m.start_pos.x,(m.start_pos.y+m.end_pos.y)/2)){//Position being stepped over
                 Some(_) => return false,
@@ -667,8 +702,6 @@ impl Piece for Queen {
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
-
-        println!("QUEEN AT LEAST CHECKING MOVEMENT");
         
         //Boiler plate
         if !move_check_a(game, &m) {
@@ -835,14 +868,16 @@ impl Game {
     
     /// If the current game state is InProgress and the move is legal, 
     /// move a piece and return the resulting state of the game.
-    pub fn make_move(&mut self, from: Position, to: Position) -> Option<GameState> {
-        let maybe_vec = (&self).get_possible_moves(from.clone());
+    pub fn make_move(&mut self, from_str: String, to_str: String) -> Option<GameState> {
+        let from = string_to_pos(from_str);
+        let to = string_to_pos(to_str);
+        let maybe_vec = (&self).get_possible_moves(from.clone().to_string());
         let mut move_allowed:bool = false;
         match maybe_vec{
             None => return None,
             Some(v) => {
                 for element in v{
-                    if element.are_identical(&to){
+                    if element == to.to_string(){
                         move_allowed = true;
                         break;
                     }
@@ -964,21 +999,21 @@ impl Game {
             let white_turn = temp_game.white_turn;
             let mut checkmate = true;
             let offset: usize = if white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
-            /*'piece: for i in 0+offset..16+offset{
+            'piece: for i in 0+offset..16+offset{
                 for x in 0..8{
                     for y in 0..8{
                         if temp_game.board[i].position.clone().to_string() == Position::new(x,y).to_string(){
                             continue;
                         }
                         //let m: Move = Move::new(temp_game.board[i].position.clone(),Position::new(x,y));
-                        temp_game.make_move(temp_game.board[i].position.clone(),Position::new(x,y));
+                        temp_game.make_move(temp_game.board[i].position.clone().to_string(),Position::new(x,y).to_string());
                         if !temp_game.check_for_check(white_turn){
                             checkmate = false;
                             break 'piece;
                         }
                     }
                 }
-            }*/
+            }
             if !checkmate{
                 return GameState::GameOver;
             }else{
@@ -1023,12 +1058,13 @@ impl Game {
     /// new positions of that piece. Don't forget to the rules for check. 
     /// 
     /// (optional) Don't forget to include en passent and castling.
-    pub fn get_possible_moves(&self, position: Position) -> Option<Vec<Position>> {
+    pub fn get_possible_moves(&self, string_position: String) -> Option<Vec<String>> {
+        let position = string_to_pos(string_position);
         match self.awaiting_promotion{
             None => (),
             Some(_) => return None
         }
-        let mut vec:Vec<Position> = Vec::new();
+        let mut vec:Vec<String> = Vec::new();
         let mut temp_game = self.clone();
         let mut identical_game = temp_game.clone();
         match identical_game.piece_at_pos(&position){
@@ -1043,37 +1079,36 @@ impl Game {
                         match variant{
                             "king" => {
                                 if make_king(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
-                                    vec.push(Position::new(x,y));
+                                    vec.push(Position::new(x,y).to_string());
                                 }
                             }
                             "pawn" => {
                                 if make_pawn(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
-                                    vec.push(Position::new(x,y));   
+                                    vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "rook" => {
                                 if make_rook(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
-                                    vec.push(Position::new(x,y));   
+                                    vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "queen" => {
                                 if make_queen(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
-                                    vec.push(Position::new(x,y));   
+                                    vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "bishop" => {
                                 if make_bishop(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
-                                    vec.push(Position::new(x,y));   
+                                    vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "nkight" => {
                                 if make_nkight(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
-                                    vec.push(Position::new(x,y));   
+                                    vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             _ => ()
                         }
-                        break;
                     }
                 }
             }
@@ -1143,22 +1178,15 @@ impl Game {
     
     pub fn print_game_state(&self){
         //Prints the current game state into the console
-        let mut board: Vec<Piecedata> = Vec::new();
-        board.clone_from_slice(&(self.board));
-        let mut set : HashMap<String, char> = HashMap::new();
-        for i in 0..32 {
-            if board[i].is_alive {
-                set.insert(board[i].position.to_string(),(&board[i].variant).chars().next().unwrap());
-            }
-        }
         for x in 0..8{
-            for y in 0..8{
-                let key = Position::new(x,y).to_string();
-                if set.contains_key(&key){
-                    print!(" {} ", set[&key]);
-                }else{
-                    print!(" * ");
+            'y: for y in 0..8{
+                for piece in &self.board{
+                    if piece.position.to_string() == Position::new(x,y).to_string(){
+                        print!(" {} ", piece.variant.chars().next().unwrap());
+                        continue 'y;
+                    }
                 }
+                print!(" * ");
             }
             println!();
         }
@@ -1325,6 +1353,28 @@ mod tests {
     #[test]
     fn it_works() {
         assert_eq!(2 + 2, 4);
+    }
+
+    #[test]
+    fn print_state() {
+        let game = Game::new();
+        game.print_game_state();
+    }
+
+    #[test]
+    fn pawn_movement() {
+        let mut game = Game::new();
+        assert_eq!(game.get_possible_moves(String::from("a2")).unwrap().contains(&String::from("a4")),true);
+        game.make_move(String::from("a2"), String::from("a4"));//double-step
+        assert_eq!(game.get_possible_moves(String::from("h7")).unwrap().contains(&String::from("h6")),true);
+        game.make_move(String::from("h7"), String::from("h6"));//Regular 1-step(black)
+        assert_eq!(game.get_possible_moves(String::from("a4")).unwrap().contains(&String::from("a5")),true);
+        game.make_move(String::from("a4"), String::from("a5"));//Regular 1-step(white)
+        assert_eq!(game.get_possible_moves(String::from("b7")).unwrap().contains(&String::from("b5")),true);
+        game.make_move(String::from("b7"), String::from("b5"));//Black double-step
+        assert_eq!(game.get_possible_moves(String::from("a5")).unwrap().contains(&String::from("b6")),true);
+        game.make_move(String::from("a5"), String::from("b6"));//En passant
+        assert_eq!(game.white_turn,false);
     }
     
     // example test

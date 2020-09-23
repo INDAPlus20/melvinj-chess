@@ -447,32 +447,32 @@ impl Piece for Pawn {
     }
     
     fn do_move(mut self, g: &mut Game, m: Move){
-        if g.piece_at_pos(&m.start_pos).unwrap().variant == String::from("pawn"){
-            if distance(m.start_pos.y, m.end_pos.y) == 1{
-                if distance(m.start_pos.x, m.end_pos.x) == 1{
-                    //Attacking
-                    match g.piece_at_pos(&m.end_pos){
-                        None => {
-                            //En passant
-                            match g.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
-                                Some(enpassant) => {
-                                    if enpassant.enpassantable > 0{
-                                        enpassant.is_alive = false;
-                                        g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
-                                        self.piece.moved = true;
-                                        return
-                                    }
-                                    
-                                    
+        if distance(m.start_pos.y, m.end_pos.y) == 1{
+            if distance(m.start_pos.x, m.end_pos.x) == 1{
+                //Attacking
+                match g.piece_at_pos(&m.end_pos){
+                    None => {
+                        //En passant
+                        match g.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
+                            Some(enpassant) => {
+                                if enpassant.enpassantable > 0{
+                                    enpassant.is_alive = false;
+                                    g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
+                                    self.piece.moved = true;
+                                    return
                                 }
-                                None => eprintln!("ERR: NO ENPASSANTABLE PIECE IN do_move!")
+                                
+                                
                             }
-                            
+                            None => eprintln!("ERR: NO ENPASSANTABLE PIECE IN do_move!")
                         }
-                        Some(_) => ()//Ehhh, not enpassant, is done further down in this function
+                        
                     }
+                    Some(_) => ()//Ehhh, not enpassant, is done further down in this function
                 }
             }
+        }else if distance(m.start_pos.y,m.end_pos.y) == 2{
+            g.piece_at_pos(&m.start_pos).unwrap().enpassantable = 2;
         }
         let killed_piece = g.piece_at_pos(&m.end_pos);
         match killed_piece{
@@ -480,8 +480,8 @@ impl Piece for Pawn {
             Some(mut kp) => kp.is_alive = false,
             None => ()
         }
+        g.piece_at_pos(&m.start_pos).unwrap().moved = true;
         g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
-        self.piece.moved = true;
         
     }
 }

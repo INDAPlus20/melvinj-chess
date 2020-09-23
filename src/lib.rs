@@ -89,6 +89,14 @@ fn make_rook(data: &Piecedata) -> Option<Rook>{
     }
 }
 
+fn make_queen(data: &Piecedata) -> Option<Queen>{
+    if data.variant == "queen"{ 
+        return Some(Queen::new(data.position.clone(),data.is_white))
+    }else {
+        None
+    }
+}
+
 fn move_check_a(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
@@ -495,6 +503,93 @@ impl Piece for Rook {
     }
 }
 
+struct Queen {
+    piece: Piecedata
+}
+
+impl Piece for Queen {
+    fn new(position: Position, is_white: bool)-> Self {
+        let piecedata = Piecedata::new(position, is_white,String::from("queen"));
+        Queen {piece: piecedata}
+    }
+
+    fn is_move_allowed(self, game: &Game, m: Move) -> bool{
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+            return false
+        }
+        
+        return move_check_b(game,&m)
+        //Return result from checkCheck
+    }
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+        
+        //Boiler plate
+        if !move_check_a(game, &m) {
+            return false
+        }
+        
+        //Unique code for piece movement
+        let mut clear_positions: Vec<Position> = Vec::new();
+
+        if m.start_pos.y == m.end_pos.y{
+            //Horizontal
+            for i in m.start_pos.x..m.end_pos.x{
+                clear_positions.push(Position::new(i,m.start_pos.y));
+            }
+        }else if m.start_pos.x == m.end_pos.x{
+            //Vertical
+            for i in m.start_pos.y..m.end_pos.y{
+                clear_positions.push(Position::new(m.start_pos.x,i));
+            }
+        }else{
+            //Diagonal
+
+            //Messy code for generating intermediary positions:
+            let right = m.start_pos.x < m.end_pos.x;
+            let up = m.start_pos.y < m.end_pos.y;
+            if right && up{
+                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                    clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y+i));
+                }
+            }
+            if right && !up{
+                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                    clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y-i));
+                }
+            }
+            if !right && up{
+                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                    clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y+i));
+                }
+            }
+            if !right && !up{
+                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                    clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
+                }
+            }
+        }
+        //Check intermediary positions
+        for clear_pos in clear_positions{
+            if !game.piece_at_pos_bool(&clear_pos){
+                return false
+            }
+        }
+        
+        //Everything except placing one's own king in check controlled.
+        true
+    }
+    fn do_move(mut self, g: &mut Game, m: Move){
+        let killed_piece = g.piece_at_pos(&m.end_pos);
+        match killed_piece{
+            //Kill the target, if it exists
+            Some(mut kp) => kp.is_alive = false,
+            None => ()
+        }
+        g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
+        self.piece.moved = true;
+    }
+}
+
 struct King {
     piece: Piecedata
 }
@@ -637,6 +732,11 @@ impl Game {
                         self.next_turn();
                         return Some(self.get_game_state());
                     }
+                    "queen" => {
+                        make_queen(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        self.next_turn();
+                        return Some(self.get_game_state());
+                    }
                     _ => ()
                 }
             } 
@@ -667,6 +767,10 @@ impl Game {
                             }*/
                             "rook" => {
                                 pawn.variant = String::from("rook");
+                                self.next_turn();
+                            },
+                            "queen" => {
+                                pawn.variant = String::from("queen");
                                 self.next_turn();
                             },
                             "nkight" => {
@@ -720,6 +824,8 @@ impl Game {
     fn create_pieces(mut self) -> Game{
         //Generate all pieces at default starting positions
         //This is ugly, but it should work
+
+        //Todo: check if white king is at index 4, otherwise reverse the vec
         self.board.push(Piecedata::new(Position::new(0,0),true,String::from("rook")));
         self.board.push(Piecedata::new(Position::new(1,0),true,String::from("nkight")));
         self.board.push(Piecedata::new(Position::new(2,0),true,String::from("bishop")));
@@ -780,6 +886,11 @@ impl Game {
                             }
                             "rook" => {
                                 if make_rook(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                    vec.push(Position::new(x,y));   
+                                }
+                            }
+                            "queen" => {
+                                if make_queen(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y));   
                                 }
                             }
@@ -920,6 +1031,11 @@ impl Game {
                             return true    
                         }
                     }
+                    "queen" => {
+                        if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            return true    
+                        }
+                    }
                     _ => ()
                 }
                 
@@ -952,6 +1068,11 @@ impl Game {
                     }
                     "rook" => {
                         if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            return true    
+                        }
+                    }
+                    "queen" => {
+                        if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
                             return true    
                         }
                     }

@@ -654,6 +654,10 @@ impl King {
             /// 
             /// (optional) Don't forget to include en passent and castling.
             pub fn get_possible_moves(&self, position: Position) -> Option<Vec<Position>> {
+                match self.awaiting_promotion{
+                    None => (),
+                    Some(_) => return None
+                }
                 let mut vec:Vec<Position> = Vec::new();
                 let mut temp_game = self.clone();
                 let mut identical_game = temp_game.clone();

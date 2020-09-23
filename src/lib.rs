@@ -48,6 +48,21 @@ impl Piecedata {
     fn new(position: Position, is_white: bool, variant: String) -> Self{
         Piecedata {position: position, is_alive: true, is_white: is_white, variant: variant, enpassantable: 0, moved: false}
     }
+    
+}
+
+impl fmt::Debug for Piecedata {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        /* build board representation string */
+        f.debug_struct("Point")
+        .field("Variant:", &self.variant)
+        .field("Position:", &self.position.to_string())
+        .field("Alive:", &self.is_alive)
+        .field("Color:",if self.is_white {&"White"}else{&"Black"})
+        .field("Moved: ", &self.moved)
+        .field("Enpassantable:",if self.enpassantable > 0 {&"Yes"}else{&"No"})
+        .finish()
+    }
 }
 
 fn make_king(data: &Piecedata) -> Option<King>{
@@ -770,6 +785,7 @@ impl King {
                             print!(" * ");
                         }
                     }
+                    println!();
                 }
             }
             
@@ -868,8 +884,10 @@ impl King {
         impl fmt::Debug for Game {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 /* build board representation string */
-                
-                write!(f, "")
+                f.debug_struct("Point")
+                .field("Board:", &self.board)
+                .field("GameState:", &self.get_game_state())
+                .finish()
             }
         }
         

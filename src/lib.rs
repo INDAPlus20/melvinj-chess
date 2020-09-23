@@ -667,6 +667,8 @@ impl Piece for Queen {
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+
+        println!("QUEEN AT LEAST CHECKING MOVEMENT");
         
         //Boiler plate
         if !move_check_a(game, &m) {
@@ -686,7 +688,7 @@ impl Piece for Queen {
             for i in m.start_pos.y..m.end_pos.y{
                 clear_positions.push(Position::new(m.start_pos.x,i));
             }
-        }else{
+        }else if distance(m.start_pos.x,m.end_pos.x) == distance(m.start_pos.y, m.end_pos.y){
             //Diagonal
 
             //Messy code for generating intermediary positions:
@@ -708,10 +710,13 @@ impl Piece for Queen {
                 }
             }
             if !right && !up{
+                println!("I WAS HERE");
                 for i in 0..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
                 }
             }
+        }else{
+            return false
         }
         //Check intermediary positions
         for clear_pos in clear_positions{
@@ -765,7 +770,7 @@ impl Piece for King {
         }
         
         //Unique code for piece movement
-        if !distance(m.start_pos.x, m.end_pos.x) <= 1 && !distance(m.start_pos.y, m.end_pos.y) <= 1{
+        if distance(m.start_pos.x, m.end_pos.x) > 1 || distance(m.start_pos.y, m.end_pos.y) > 1{
             return false
         }
         
@@ -959,7 +964,7 @@ impl Game {
             let white_turn = temp_game.white_turn;
             let mut checkmate = true;
             let offset: usize = if white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
-            'piece: for i in 0+offset..16+offset{
+            /*'piece: for i in 0+offset..16+offset{
                 for x in 0..8{
                     for y in 0..8{
                         if temp_game.board[i].position.clone().to_string() == Position::new(x,y).to_string(){
@@ -973,8 +978,8 @@ impl Game {
                         }
                     }
                 }
-            }
-            if checkmate{
+            }*/
+            if !checkmate{
                 return GameState::GameOver;
             }else{
                 return GameState::Check;
@@ -1190,31 +1195,37 @@ impl Game {
                     //If it is, the king is in check
                     "king" => {
                         if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
                             return true    
                         }
                     },
                     "pawn" => {
                         if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "rook" => {
                         if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "queen" => {
                         if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "bishop" => {
                         if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "nkight" => {
                         if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
                             return true    
                         }
                     }
@@ -1324,5 +1335,12 @@ mod tests {
         let game = Game::new();
         
         assert_eq!(game.get_game_state(), GameState::InProgress);
+    }
+    #[test]
+    fn white_king_at_correct_index() {
+        
+        let game = Game::new();
+        
+        assert_eq!(game.board[4].variant, "king");
     }
 }

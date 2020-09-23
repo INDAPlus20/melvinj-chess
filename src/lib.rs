@@ -410,11 +410,12 @@ impl Piece for Pawn {
         }else if distance(m.start_pos.y, m.end_pos.y) == 1{
             if distance(m.start_pos.x, m.end_pos.x) == 1{
                 //Attacking
+                
                 let mut temp_game = game.clone();
                 match temp_game.piece_at_pos(&m.end_pos){
                     None => {
                         //En passant
-                        match temp_game.piece_at_pos(&Position::new(m.start_pos.y,m.end_pos.x)){
+                        match temp_game.piece_at_pos(&Position::new(m.end_pos.x,m.start_pos.y)){
                             Some(enpassant) => {
                                 if enpassant.enpassantable > 0{
                                     return true
@@ -1083,6 +1084,9 @@ impl Game {
                                 }
                             }
                             "pawn" => {
+                                if temp_move.end_pos.to_string() == String::from("b6"){
+                                    println!("enpassant: {}",temp_game.board[25].enpassantable);
+                                }
                                 if make_pawn(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }

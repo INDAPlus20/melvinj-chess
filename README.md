@@ -15,3 +15,4 @@ They could simply be replaced by functions for individual piece movements.
 - Promotion
 - GameState after creation
 - Check but no Checkmate
+- Pawn Movement (including en passant)

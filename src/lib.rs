@@ -1412,4 +1412,23 @@ impl Game {
         game.print_game_state();
         assert_eq!(game.get_game_state(), GameState::GameOver);
     }
+
+    #[test]
+    fn promotion() {
+        let mut game = Game::new();
+        game.make_move(String::from("b2"), String::from("b4"));
+        game.make_move(String::from("a7"), String::from("a6"));
+        game.make_move(String::from("b4"), String::from("b5"));
+        game.make_move(String::from("a6"), String::from("a5"));
+        game.make_move(String::from("b5"), String::from("b6"));
+        game.make_move(String::from("a5"), String::from("a4"));
+        game.make_move(String::from("b6"), String::from("c7"));
+        game.make_move(String::from("a4"), String::from("a3"));
+        game.make_move(String::from("c7"), String::from("b8"));
+        game.print_game_state();
+        assert_eq!(game.board[9].variant, String::from("pawn"));
+        game.set_promotion(String::from("queen"));
+        game.print_game_state();
+        assert_eq!(game.board[9].variant, String::from("queen"));
+    }
 }

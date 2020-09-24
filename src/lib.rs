@@ -28,7 +28,7 @@ pub struct Game {
 }
 
 #[derive(Clone)]
-pub struct Piecedata {
+struct Piecedata {
     //Struct containing data for pieces
     position: Position,
     is_alive: bool,
@@ -1133,7 +1133,7 @@ impl Game {
         }
     }
     
-    pub fn piece_at_pos(&mut self, pos: &Position) -> Option<&mut Piecedata>{
+    fn piece_at_pos(&mut self, pos: &Position) -> Option<&mut Piecedata>{
         //Returns a mutable Piecedata of the piece at a given position
         //If there is no Piecedata at the position, returns None
         for i in 0..self.board.len(){
@@ -1149,7 +1149,7 @@ impl Game {
         None
     }
     
-    pub fn piece_at_pos_bool(&self, pos: &Position) -> bool{
+    fn piece_at_pos_bool(&self, pos: &Position) -> bool{
         //Returns true if there is a piece at the position
         let board = &self.board;
         let length = board.len();
@@ -1166,7 +1166,7 @@ impl Game {
         false
     }
     
-    pub fn piece_at_pos_is_white(&self, pos: &Position) -> bool{
+    fn piece_at_pos_is_white(&self, pos: &Position) -> bool{
         //Returns true if the piece at the position is white
         //Panics if there is no piece there
         let board = &self.board;
@@ -1183,7 +1183,7 @@ impl Game {
         panic!()
     }
     
-    pub fn index_of_piece_in_board(&self, pos: &Position) -> Option<usize>{
+    fn index_of_piece_in_board(&self, pos: &Position) -> Option<usize>{
         //Gets the index in board of the piece at the specified position. 
         //Returns none if there is no Piece at the given position
         let board = &self.board;

@@ -15,7 +15,7 @@ pub enum GameState {
 
 /* IMPORTANT:
 * - Document well!
-* - Write well structured and somewhat clean code!
+* - Write well structured and [somewhat] clean code!
 */
 
 pub struct Game {
@@ -49,7 +49,7 @@ impl Piecedata {
 impl fmt::Debug for Piecedata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         /* Piecedata debugging information */
-        f.debug_struct("Point")
+        f.debug_struct("Piecedata")
         .field("Variant:", &self.variant)
         .field("Position:", &self.position.to_string())
         .field("Alive:", &self.is_alive)
@@ -68,52 +68,81 @@ impl fmt::Debug for Piecedata {
 *Not have Piece, King or similar structs. Maybe next time
 *They return None only when they are given bad data, of the incorrect type
 */
-fn make_king(data: &Piecedata) -> Option<King>{
+fn make_king(data: &Piecedata) -> King{
     if data.variant == "king"{ 
-        return Some(King::new(data.position.clone(),data.is_white))
+        return King::new(data.position.clone(),data.is_white)
     }else {
-        None
+        panic!()
     }
 }
 
-fn make_pawn(data: &Piecedata) -> Option<Pawn>{
+fn make_pawn(data: &Piecedata) -> Pawn{
     if data.variant == "pawn"{ 
-        return Some(Pawn::new(data.position.clone(),data.is_white))
+        return Pawn::new(data.position.clone(),data.is_white)
     }else {
-        None
+        panic!()
     }
 }
 
-fn make_rook(data: &Piecedata) -> Option<Rook>{
+fn make_rook(data: &Piecedata) -> Rook{
     if data.variant == "rook"{ 
-        return Some(Rook::new(data.position.clone(),data.is_white))
+        return Rook::new(data.position.clone(),data.is_white)
     }else {
-        None
+        panic!()
     }
 }
 
-fn make_queen(data: &Piecedata) -> Option<Queen>{
+fn make_queen(data: &Piecedata) -> Queen{
     if data.variant == "queen"{ 
-        return Some(Queen::new(data.position.clone(),data.is_white))
+        return Queen::new(data.position.clone(),data.is_white)
     }else {
-        None
+        panic!()
     }
 }
 
-fn make_bishop(data: &Piecedata) -> Option<Bishop>{
+fn make_bishop(data: &Piecedata) -> Bishop{
     if data.variant == "bishop"{ 
-        return Some(Bishop::new(data.position.clone(),data.is_white))
+        return Bishop::new(data.position.clone(),data.is_white)
     }else {
-        None
+        panic!()
     }
 }
 
-fn make_nkight(data: &Piecedata) -> Option<Nkight>{
+fn make_nkight(data: &Piecedata) -> Nkight{
     if data.variant == "nkight"{ 
-        return Some(Nkight::new(data.position.clone(),data.is_white))
+        return Nkight::new(data.position.clone(),data.is_white)
     }else {
-        None
+        panic!()
     }
+}
+
+fn horizontal_positions(m: Move) -> Vec<Position>{
+    let mut clear_positions: Vec<Position> = Vec::new();
+    if m.start_pos.y == m.end_pos.y{
+        //Horizontal
+        if m.start_pos.x+1 > m.end_pos.x{
+            for i in m.end_pos.x..m.start_pos.x{
+                clear_positions.push(Position::new(i,m.start_pos.y));
+            }
+        }else{
+            for i in m.start_pos.x+1..m.end_pos.x{
+                clear_positions.push(Position::new(i,m.start_pos.y));
+            }
+        }
+        
+    }else if m.start_pos.x == m.end_pos.x{
+        //Vertical
+        if m.start_pos.y > m.end_pos.y{
+            for i in m.end_pos.y+1..m.start_pos.y{
+                clear_positions.push(Position::new(m.start_pos.x,i));
+            }
+        }else{
+            for i in m.start_pos.y+1..m.end_pos.y{
+                clear_positions.push(Position::new(m.start_pos.x,i));
+            }
+        }
+    }
+    return clear_positions
 }
 
 //Converts a String to a position. 
@@ -151,7 +180,7 @@ fn string_to_pos(string: String)->Position{
     }
 }
 
-fn move_check_a(game: &Game, m: &Move) -> bool{
+fn primary_move_check(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -192,7 +221,7 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
     true
 }
 
-fn move_check_b(game: &Game, n: &Move) -> bool{
+fn secondary_move_check(game: &Game, n: &Move) -> bool{
     //Attempt the move and see if the player's king is checked
     
     let m:Move = Move::new(n.start_pos.clone(),n.end_pos.clone());
@@ -348,13 +377,13 @@ impl Piece for Pawn {
             return false
         }
         
-        return move_check_b(game,&m)
+        return secondary_move_check(game,&m)
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !primary_move_check(game, &m) {
             return false
         }
         
@@ -396,9 +425,9 @@ impl Piece for Pawn {
                                 if enpassant.enpassantable > 0{
                                     return true
                                     //There is a bug in this implementation
-                                    //Since the enpassantable pawn does not disappear in move_check_b for check_checking
+                                    //Since the enpassantable pawn does not disappear in secondary_move_check for check_checking
                                     //It could allow some move which is actually illegal
-                                    //This could be fixed by putting the sensing code into move_check_b and killing the pawn
+                                    //This could be fixed by putting the sensing code into secondary_move_check and killing the pawn
                                 }
                             },
                             None => ()
@@ -480,37 +509,19 @@ impl Piece for Rook {
             return false
         }
         
-        return move_check_b(game,&m)
+        return secondary_move_check(game,&m)
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !primary_move_check(game, &m) {
             return false
         }
         
         //Unique code for piece movement
-        let mut clear_positions: Vec<Position> = Vec::new();
+        let clear_positions = horizontal_positions(m);
         
-        if m.start_pos.x != m.end_pos.x{
-            if m.start_pos.y != m.end_pos.y{
-                return false;
-            }else{
-                for i in m.start_pos.x..m.end_pos.x{
-                    if i != m.start_pos.x && i != m.end_pos.x{
-                        clear_positions.push(Position::new(i,m.start_pos.y));
-                    }
-                }
-            }
-        }else{
-            //Straight line or same position (should be checked before calling this function)
-            for i in m.start_pos.y..m.end_pos.y{
-                if i != m.start_pos.y && i != m.end_pos.y{
-                    clear_positions.push(Position::new(m.start_pos.x,i));
-                }
-            }
-        }
         //Check intermediary positions
         for clear_pos in clear_positions{
             if game.piece_at_pos_bool(&clear_pos){
@@ -548,13 +559,13 @@ impl Piece for Bishop {
             return false
         }
         
-        return move_check_b(game,&m)
+        return secondary_move_check(game,&m)
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !primary_move_check(game, &m) {
             return false
         }
         
@@ -625,13 +636,13 @@ impl Piece for Nkight {
             return false
         }
         
-        return move_check_b(game,&m)
+        return secondary_move_check(game,&m)
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !primary_move_check(game, &m) {
             return false
         }
         
@@ -677,13 +688,13 @@ impl Piece for Queen {
             return false
         }
         
-        return move_check_b(game,&m)
+        return secondary_move_check(game,&m)
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
 
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !primary_move_check(game, &m) {
             return false
         }
         
@@ -692,29 +703,8 @@ impl Piece for Queen {
         //Unique code for piece movement
         let mut clear_positions: Vec<Position> = Vec::new();
         
-        if m.start_pos.y == m.end_pos.y{
-            //Horizontal
-            if m.start_pos.x+1 > m.end_pos.x{
-                for i in m.end_pos.x..m.start_pos.x{
-                    clear_positions.push(Position::new(i,m.start_pos.y));
-                }
-            }else{
-                for i in m.start_pos.x+1..m.end_pos.x{
-                    clear_positions.push(Position::new(i,m.start_pos.y));
-                }
-            }
-            
-        }else if m.start_pos.x == m.end_pos.x{
-            //Vertical
-            if m.start_pos.y > m.end_pos.y{
-                for i in m.end_pos.y+1..m.start_pos.y{
-                    clear_positions.push(Position::new(m.start_pos.x,i));
-                }
-            }else{
-                for i in m.start_pos.y+1..m.end_pos.y{
-                    clear_positions.push(Position::new(m.start_pos.x,i));
-                }
-            }
+        if m.start_pos.y == m.end_pos.y || m.start_pos.x == m.end_pos.x{
+            clear_positions = horizontal_positions(m);
         }else if distance(m.start_pos.x,m.end_pos.x) == distance(m.start_pos.y, m.end_pos.y){
             //Diagonal
             
@@ -785,13 +775,13 @@ impl Piece for King {
             return false
         }
         
-        return move_check_b(game,&m)
+        return secondary_move_check(game,&m)
         //Return result from checkCheck
     }
     fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !primary_move_check(game, &m) {
             return false
         }
         
@@ -919,12 +909,12 @@ impl Game {
                     //Then check if the move is allowed
                     
                     "king" => {
-                        make_king(&cloned_piece).unwrap().do_move(self, m);
+                        make_king(&cloned_piece).do_move(self, m);
                         self.next_turn();
                         return true;
                     }
                     "pawn" => {
-                        make_pawn(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        make_pawn(&cloned_piece).do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         if m.end_pos.y == if self.white_turn {7} else {0}{
                             //Promotion, the game awaits what piece to promote the pawn to
                             self.awaiting_promotion = Some(m.end_pos);
@@ -934,22 +924,22 @@ impl Game {
                         return true;
                     }
                     "rook" => {
-                        make_rook(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        make_rook(&cloned_piece).do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
                         return true;
                     }
                     "queen" => {
-                        make_queen(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        make_queen(&cloned_piece).do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
                         return true;
                     }
                     "bishop" => {
-                        make_bishop(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        make_bishop(&cloned_piece).do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
                         return true;
                     }
                     "nkight" => {
-                        make_nkight(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
+                        make_nkight(&cloned_piece).do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
                         return true;
                     }
@@ -1119,32 +1109,32 @@ impl Game {
                         let temp_move = Move::new(position.clone(), Position::new(x,y));
                         match variant{
                             "king" => {
-                                if make_king(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                if make_king(&piece).is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());
                                 }
                             }
                             "pawn" => {
-                                if make_pawn(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                if make_pawn(&piece).is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "rook" => {
-                                if make_rook(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                if make_rook(&piece).is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "queen" => {
-                                if make_queen(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                if make_queen(&piece).is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "bishop" => {
-                                if make_bishop(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                if make_bishop(&piece).is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
                             }
                             "nkight" => {
-                                if make_nkight(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
+                                if make_nkight(&piece).is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
                             }
@@ -1260,7 +1250,6 @@ impl Game {
         let board = temp_game.board.clone();
         let offset = if temp_game.white_turn {16} else {0};
         let kingpos = if temp_game.white_turn {4} else {20};
-        //This could be shortened to use a offset of 16 instead of two separate for-loops
         
         temp_game.white_turn = !temp_game.white_turn;
 
@@ -1279,37 +1268,37 @@ impl Game {
                     //Then check if the move is allowed
                     //If it is, the king is in check
                     "king" => {
-                        if make_king(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                        if make_king(&pieced).secondary_is_move_allowed(&temp_game, temp_move) {
                             //println!("{:?} can check",pieced);
                             return true    
                         }
                     },
                     "pawn" => {
-                        if make_pawn(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                        if make_pawn(&pieced).secondary_is_move_allowed(&temp_game, temp_move) {
                             //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "rook" => {
-                        if make_rook(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                        if make_rook(&pieced).secondary_is_move_allowed(&temp_game, temp_move) {
                             //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "queen" => {
-                        if make_queen(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                        if make_queen(&pieced).secondary_is_move_allowed(&temp_game, temp_move) {
                             //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "bishop" => {
-                        if make_bishop(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                        if make_bishop(&pieced).secondary_is_move_allowed(&temp_game, temp_move) {
                             //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "nkight" => {
-                        if make_nkight(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                        if make_nkight(&pieced).secondary_is_move_allowed(&temp_game, temp_move) {
                             //println!("{:?} can check",pieced);
                             return true    
                         }

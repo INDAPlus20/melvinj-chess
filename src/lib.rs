@@ -875,9 +875,13 @@ impl Game {
     /// If the current game state is InProgress and the move is legal, 
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, from_str: String, to_str: String) -> Option<GameState> {
-        self.make_move_private(from_str,to_str)//Yes
+        if self.make_move_private(from_str,to_str){
+            return Some(self.get_game_state());
+        }else{
+            return None
+        }
     }
-    fn make_move_private(&mut self, from_str: String, to_str: String) -> Option<GameState> {
+    fn make_move_private(&mut self, from_str: String, to_str: String) -> bool {
         let from = string_to_pos(from_str);
         let to = string_to_pos(to_str);
         
@@ -885,7 +889,7 @@ impl Game {
         let maybe_vec = (&self).get_possible_moves(from.clone().to_string());
         let mut move_allowed:bool = false;
         match maybe_vec{
-            None => return None,
+            None => return false,
             Some(v) => {
                 for element in v{
                     if element == to.to_string(){
@@ -898,14 +902,14 @@ impl Game {
         }
         if !move_allowed{
             //get_possible_moves does not think the move is possible, return
-            return None;
+            return false;
         }
         
         //Do the move
         
         let m: Move = Move::new(from.clone(),to);
         match self.piece_at_pos(&from){
-            None => return None,//No piece at position, can't make move. Should have returned in previous step
+            None => return false,//No piece at position, can't make move. Should have returned in previous step
             Some(piece) => {
                 let cloned_piece = piece.clone();
                 let literal_variant: &str = &piece.variant;
@@ -917,7 +921,7 @@ impl Game {
                     "king" => {
                         make_king(&cloned_piece).unwrap().do_move(self, m);
                         self.next_turn();
-                        return Some(self.get_game_state());
+                        return true;
                     }
                     "pawn" => {
                         make_pawn(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
@@ -927,34 +931,34 @@ impl Game {
                         }else{
                             self.next_turn();
                         }
-                        return Some(self.get_game_state());
+                        return true;
                     }
                     "rook" => {
                         make_rook(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return Some(self.get_game_state());
+                        return true;
                     }
                     "queen" => {
                         make_queen(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return Some(self.get_game_state());
+                        return true;
                     }
                     "bishop" => {
                         make_bishop(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return Some(self.get_game_state());
+                        return true;
                     }
                     "nkight" => {
                         make_nkight(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return Some(self.get_game_state());
+                        return true;
                     }
                     _ => ()
                 }
             } 
         }
         
-        None
+        false
         
     }
     

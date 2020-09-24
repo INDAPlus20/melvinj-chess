@@ -151,7 +151,10 @@ fn string_to_pos(string: String)->Position{
     }
 }
 
-fn move_check_a(game: &Game, m: &Move) -> bool{
+fn move_check_a(game: &Game, m: &Move, cfc: bool) -> bool{
+    if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
+        println!("AT LEAST CHECKING A");
+    }
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -178,18 +181,42 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
     
     //White turn?
     let white_turn = game.white_turn;
-    
-    if white_turn != game.piece_at_pos_is_white(&m.start_pos){
-        //Moving enemy piece
-        return false;
-    }
-    if game.piece_at_pos_bool(&m.end_pos){
-        if white_turn == game.piece_at_pos_is_white(&m.end_pos){
-            //Piece at end pos of same color as attacker
+    if !cfc{
+        if white_turn != game.piece_at_pos_is_white(&m.start_pos){
+            //Moving enemy piece
+            if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
+                println!("Ovve4 moving enemy");
+            }
             return false;
         }
+        if game.piece_at_pos_bool(&m.end_pos){
+            if white_turn == game.piece_at_pos_is_white(&m.end_pos){
+                //Piece at end pos of same color as attacker
+                if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
+                    println!("Ovve4 end pos attacker team");
+                }
+                return false;
+            }
+        }
+    }else{
+        if white_turn == game.piece_at_pos_is_white(&m.start_pos){
+            //Moving enemy piece
+            if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
+                println!("Ovve4 cfc moving enemy");
+            }
+            return false;
+        }
+        if game.piece_at_pos_bool(&m.end_pos){
+            if white_turn != game.piece_at_pos_is_white(&m.end_pos){
+                //Piece at end pos of same color as attacker
+                if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
+                    println!("Ovve4 cfc attacking same team");
+                }
+                return false;
+            }
+        }
     }
-
+    
     true
 }
 
@@ -275,7 +302,7 @@ trait Piece {
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool;
     
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool;
+    fn secondary_is_move_allowed(self, game: &Game, m: Move, cfc: bool) -> bool;
     
     fn do_move(self, g: &mut Game, m: Move);
 }
@@ -349,17 +376,17 @@ impl Piece for Pawn {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move, cfc:bool) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(game, &m,cfc) {
             return false
         }
         
@@ -481,17 +508,17 @@ impl Piece for Rook {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(game, &m,cfc) {
             return false
         }
         
@@ -549,17 +576,17 @@ impl Piece for Bishop {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(game, &m,cfc) {
             return false
         }
         
@@ -571,22 +598,22 @@ impl Piece for Bishop {
             let right = m.start_pos.x < m.end_pos.x;
             let up = m.start_pos.y < m.end_pos.y;
             if right && up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y+i));
                 }
             }
             if right && !up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y-i));
                 }
             }
             if !right && up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y+i));
                 }
             }
             if !right && !up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
                 }
             }
@@ -626,17 +653,17 @@ impl Piece for Nkight {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(game, &m,cfc) {
             return false
         }
         
@@ -678,32 +705,47 @@ impl Piece for Queen {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(game, &m,cfc) {
             return false
         }
+
+        
         
         //Unique code for piece movement
         let mut clear_positions: Vec<Position> = Vec::new();
         
         if m.start_pos.y == m.end_pos.y{
             //Horizontal
-            for i in m.start_pos.x..m.end_pos.x{
-                clear_positions.push(Position::new(i,m.start_pos.y));
+            if m.start_pos.x+1 > m.end_pos.x{
+                for i in m.end_pos.x..m.start_pos.x{
+                    clear_positions.push(Position::new(i,m.start_pos.y));
+                }
+            }else{
+                for i in m.start_pos.x+1..m.end_pos.x{
+                    clear_positions.push(Position::new(i,m.start_pos.y));
+                }
             }
+            
         }else if m.start_pos.x == m.end_pos.x{
             //Vertical
-            for i in m.start_pos.y..m.end_pos.y{
-                clear_positions.push(Position::new(m.start_pos.x,i));
+            if m.start_pos.y > m.end_pos.y{
+                for i in m.end_pos.y+1..m.start_pos.y{
+                    clear_positions.push(Position::new(m.start_pos.x,i));
+                }
+            }else{
+                for i in m.start_pos.y+1..m.end_pos.y{
+                    clear_positions.push(Position::new(m.start_pos.x,i));
+                }
             }
         }else if distance(m.start_pos.x,m.end_pos.x) == distance(m.start_pos.y, m.end_pos.y){
             //Diagonal
@@ -712,22 +754,22 @@ impl Piece for Queen {
             let right = m.start_pos.x < m.end_pos.x;
             let up = m.start_pos.y < m.end_pos.y;
             if right && up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y+i));
                 }
             }
             if right && !up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y-i));
                 }
             }
             if !right && up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y+i));
                 }
             }
             if !right && !up{
-                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
+                for i in 1..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
                 }
             }
@@ -771,17 +813,17 @@ impl Piece for King {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m) {
+        if !move_check_a(game, &m,cfc) {
             return false
         }
         
@@ -800,7 +842,12 @@ impl Piece for King {
         let killed_piece = g.piece_at_pos(&m.end_pos);
         match killed_piece{
             //Kill the target, if it exists
-            Some(mut kp) => kp.is_alive = false,
+            Some(_) => {
+                g.piece_at_pos(&m.end_pos).unwrap().is_alive = false;
+                if m.end_pos.to_string() == String::from("f7"){
+                    //println!("Nasty q: {:?}", g.piece_at_pos(&m.end_pos).unwrap());
+                }    
+            },
             None => ()
         }
         g.piece_at_pos(&m.start_pos).unwrap().position = m.end_pos;
@@ -847,6 +894,7 @@ impl Game {
     
     fn next_turn(&mut self){
         //A player completed their turn
+       println!("TURN CHANGING FROM {} TO {}",self.white_turn,!self.white_turn);
         self.white_turn = !self.white_turn;
         
         //Since enpassant is only valid the turn directly following the double-step
@@ -860,6 +908,9 @@ impl Game {
     /// If the current game state is InProgress and the move is legal, 
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, from_str: String, to_str: String) -> Option<GameState> {
+        self.make_move_private(from_str,to_str)//Yes
+    }
+    fn make_move_private(&mut self, from_str: String, to_str: String) -> Option<GameState> {
         let from = string_to_pos(from_str);
         let to = string_to_pos(to_str);
         
@@ -908,6 +959,7 @@ impl Game {
                             self.awaiting_promotion = Some(m.end_pos);
                         }else{
                             self.next_turn();
+                            println!("Move to {} performed, turn changed to {}",m.end_pos.to_string(),self.white_turn);
                         }
                         return Some(self.get_game_state());
                     }
@@ -992,19 +1044,15 @@ impl Game {
     
     /// Get the current game state. Returns GameState::WhatEver
     pub fn get_game_state(&self) -> GameState {
-        //Pseudocode:
-        //If king is checked
-        //If checkmate
-        //GameOver
-        //else
-        //Checked
-        //else
-        //InProgress
+        
         
         //Compute the GameState
         let checked = self.check_for_check(self.white_turn);
         if checked{
             let mut temp_game = self.clone();
+            if !temp_game.check_for_check(temp_game.white_turn){
+                println!("MAJOR ERROR");
+            }
             let white_turn = temp_game.white_turn;
             let mut checkmate = true;
             let offset: usize = if white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
@@ -1014,17 +1062,24 @@ impl Game {
                         if temp_game.board[i].position.clone().to_string() == Position::new(x,y).to_string(){
                             continue;
                         }
+                        let start = temp_game.board[i].position.clone().to_string();
+                        let end = Position::new(x,y).to_string();
                         //Attempt every possible move by the player and see if the king still is in check
-                        temp_game.make_move(temp_game.board[i].position.clone().to_string(),Position::new(x,y).to_string());
+                        println!("TEMP GAME PRINTING:::");
+                        temp_game.print_game_state();
+                        temp_game.make_move(start.to_string(),end.to_string());
+                        temp_game.white_turn = white_turn;
+                        temp_game.print_game_state();
                         if !temp_game.check_for_check(white_turn){
                             //Some move allows the king to survive, break the outermost loop
+                            println!("{} {} Not checkmate, {:?}, can do move {}-{}",white_turn, i,temp_game.board[i],start,end);
                             checkmate = false;
                             break 'piece;
                         }
                     }
                 }
             }
-            if !checkmate{
+            if checkmate{
                 return GameState::GameOver;
             }else{
                 return GameState::Check;
@@ -1069,6 +1124,9 @@ impl Game {
     /// 
     /// (optional) Don't forget to include en passant and [redacted].
     pub fn get_possible_moves(&self, string_position: String) -> Option<Vec<String>> {
+        if string_position == String::from("c4"){
+            println!("checking possible from c4");
+        }
         let position = string_to_pos(string_position);
         match self.awaiting_promotion{
             None => (),
@@ -1115,6 +1173,9 @@ impl Game {
                                 }
                             }
                             "bishop" => {
+                                if temp_move.start_pos.to_string() == String::from("c4") && temp_move.end_pos.to_string() == String::from("f7"){
+                                    println!("def not possible from c4 to f7, {}", temp_game.white_turn);
+                                }
                                 if make_bishop(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
@@ -1258,37 +1319,37 @@ impl Game {
                         //Then check if the move is allowed
                         //If it is, the king is in check
                         "king" => {
-                            if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 println!("{:?} can check",pieced);
                                 return true    
                             }
                         },
                         "pawn" => {
-                            if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 println!("{:?} can check",pieced);
                                 return true    
                             }
                         }
                         "rook" => {
-                            if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 println!("{:?} can check",pieced);
                                 return true    
                             }
                         }
                         "queen" => {
-                            if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 println!("{:?} can check",pieced);
                                 return true    
                             }
                         }
                         "bishop" => {
-                            if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 println!("{:?} can check",pieced);
                                 return true    
                             }
                         }
                         "nkight" => {
-                            if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 println!("{:?} can check",pieced);
                                 return true    
                             }
@@ -1297,8 +1358,7 @@ impl Game {
                     }
                     
                 }
-            }
-            else{
+            }else{
                 //Check all white pieces
                 for i in 0..16{
                     let pieced = &board[i];
@@ -1309,37 +1369,42 @@ impl Game {
                     let temp_move: Move = Move::new(
                         pieced.position.clone(),
                         board[20].position.clone());//king pos
+                        if temp_move.start_pos.to_string() == String::from("f7") && temp_move.end_pos.to_string() == String::from("f8"){
+                            println!("Ovve1");
+                        }
                         let variant: &str = &pieced.variant;
                         match variant {//Convert the Piecedata instance into it's struct
                         //Then check if the move is allowed
                         //If it is, the king is in check
                         "king" => {
-                            if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 return true    
                             }
                         }
                         "pawn" => {
-                            if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 return true    
                             }
                         }
                         "rook" => {
-                            if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 return true    
                             }
                         }
                         "queen" => {
-                            if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            let tempstart = temp_move.start_pos.clone();
+                            let tempend = temp_move.end_pos.clone();
+                            if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 return true    
                             }
                         }
                         "bishop" => {
-                            if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 return true    
                             }
                         }
                         "nkight" => {
-                            if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
                                 return true    
                             }
                         }
@@ -1414,7 +1479,7 @@ impl Game {
             game.make_move(String::from("a5"), String::from("b6"));//En passant
             assert_eq!(game.white_turn,false);
         }
-
+        
         #[test]
         fn game_in_progress_after_init() {
             //The game state should be InProgress just after creation
@@ -1426,24 +1491,34 @@ impl Game {
             //The white king should be at index 4.
             let game = Game::new();
             assert_eq!(game.board[4].variant, "king");
+            assert_eq!(game.board[4].is_white, true);
+            println!("henlo {:?}",game.board[20]);
+            assert_eq!(game.board[20].variant, "king");
+            assert_eq!(game.board[20].is_white, false);
         }
-
+        
         #[test]
         fn skolmatt() {//Can't find proper translation, 'school mat' is terrible
-            let mut game = Game::new();
-            game.make_move(String::from("e2"), String::from("e3"));
-            game.make_move(String::from("a7"), String::from("a5"));
-            game.make_move(String::from("f1"), String::from("c4"));
-            game.make_move(String::from("a5"), String::from("a4"));
-            game.make_move(String::from("d1"), String::from("h5"));
-            let vec = game.get_possible_moves(String::from("a4")).unwrap();
-            for ahepp in vec{
-                println!("UwU {}",ahepp.to_string());
-            }
-            game.make_move(String::from("a8"), String::from("a7"));
-            game.make_move(String::from("a5"), String::from("b6"));
-            game.make_move(String::from("h5"), String::from("f7"));
-            game.print_game_state();
-            assert_eq!(game.get_game_state(), GameState::GameOver);
+        let mut game = Game::new();
+        game.make_move(String::from("e2"), String::from("e3"));
+        game.make_move(String::from("a7"), String::from("a5"));
+        game.make_move(String::from("f1"), String::from("c4"));
+        game.make_move(String::from("a5"), String::from("a4"));
+        game.make_move(String::from("d1"), String::from("h5"));
+        game.make_move(String::from("a8"), String::from("a7"));
+        game.make_move(String::from("a5"), String::from("b6"));
+        game.make_move(String::from("h5"), String::from("f7"));
+        if game.check_for_check(false){
+            println!("IN CHECK");
         }
+        game.white_turn = true;
+        println!("SPECIAL TIME");
+        let vec = game.get_possible_moves(String::from("c4")).unwrap();
+        for pos in vec{
+            println!("BISH can move to {}",pos.to_string());
+        }
+        println!("white queen status: {:?}",game.board[3]);
+        game.print_game_state();
+        assert_eq!(game.get_game_state(), GameState::GameOver);
     }
+}

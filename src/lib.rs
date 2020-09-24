@@ -1431,4 +1431,18 @@ impl Game {
         game.print_game_state();
         assert_eq!(game.board[9].variant, String::from("queen"));
     }
+
+    #[test]
+    fn check_no_checkmate() {
+        let mut game = Game::new();
+        game.make_move(String::from("d2"), String::from("d3"));
+        game.make_move(String::from("e7"), String::from("e5"));
+        game.make_move(String::from("d1"), String::from("d2"));
+        game.make_move(String::from("a7"), String::from("a6"));
+        game.make_move(String::from("d2"), String::from("e3"));
+        game.make_move(String::from("a6"), String::from("a5"));
+        game.make_move(String::from("e3"), String::from("e5"));
+        game.print_game_state();
+        assert_eq!(game.get_game_state(),GameState::Check);
+    }
 }

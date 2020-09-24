@@ -151,7 +151,7 @@ fn string_to_pos(string: String)->Position{
     }
 }
 
-fn move_check_a(game: &Game, m: &Move, cfc: bool) -> bool{
+fn move_check_a(game: &Game, m: &Move) -> bool{
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -205,7 +205,6 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
         //There is a piece at the target
         let attacker_board_index = &temp_game.index_of_piece_in_board(&m.start_pos);
         let target_board_index = &temp_game.index_of_piece_in_board(&m.end_pos);
-        let mut attacker_white: bool = true;
         
         //BIG nasty block for checking killing the target piece and moving the attacker
         //Could be accomplished with indexes instead, but this works
@@ -220,7 +219,6 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
                             //Both target and attacker have been found
                             maybe_target.is_alive = false;//Kill target
                             maybe_attacker.position = m.end_pos.clone();
-                            attacker_white = maybe_attacker.is_white;
                             break;
                             
                         }
@@ -239,7 +237,6 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
                             //Both target and attacker found
                             maybe_target.is_alive = false;
                             maybe_attacker.position = m.end_pos.clone();
-                            attacker_white = maybe_attacker.is_white;
                             break;
                         }
                     }
@@ -248,16 +245,15 @@ fn move_check_b(game: &Game, n: &Move) -> bool{
                 }
             }
         }
-        checked = temp_game.check_for_check(attacker_white);//Check check status
+        checked = temp_game.check_for_check();//Check check status
     }else{
         //No target piece to kill
         let mut temp_game = game.clone();
-        let is_white = temp_game.piece_at_pos_is_white(&m.start_pos);
         temp_game.piece_at_pos(&m.start_pos)
         .unwrap()
         .position = m.end_pos.clone();
         
-        checked = temp_game.check_for_check(is_white);
+        checked = temp_game.check_for_check();
         
         //Revert (this function is only for checking if the move is valid)
         temp_game.piece_at_pos(&m.end_pos).unwrap().position = m.start_pos.clone();
@@ -274,7 +270,7 @@ trait Piece {
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool;
     
-    fn secondary_is_move_allowed(self, game: &Game, m: Move, cfc: bool) -> bool;
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool;
     
     fn do_move(self, g: &mut Game, m: Move);
 }
@@ -348,17 +344,17 @@ impl Piece for Pawn {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move, cfc:bool) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m,cfc) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -480,17 +476,17 @@ impl Piece for Rook {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m,cfc) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -548,17 +544,17 @@ impl Piece for Bishop {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m,cfc) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -625,17 +621,17 @@ impl Piece for Nkight {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m,cfc) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -677,20 +673,20 @@ impl Piece for Queen {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
-        
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
+
         //Boiler plate
-        if !move_check_a(game, &m,cfc) {
+        if !move_check_a(game, &m) {
             return false
         }
-
+        
         
         
         //Unique code for piece movement
@@ -785,17 +781,17 @@ impl Piece for King {
     }
     
     fn is_move_allowed(self, game: &Game, m: Move) -> bool{
-        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone()),false){
+        if !self.secondary_is_move_allowed(game, Move::new(m.start_pos.clone(),m.end_pos.clone())){
             return false
         }
         
         return move_check_b(game,&m)
         //Return result from checkCheck
     }
-    fn secondary_is_move_allowed(self, game: &Game, m: Move,cfc:bool) -> bool{
+    fn secondary_is_move_allowed(self, game: &Game, m: Move) -> bool{
         
         //Boiler plate
-        if !move_check_a(game, &m,cfc) {
+        if !move_check_a(game, &m) {
             return false
         }
         
@@ -1015,25 +1011,34 @@ impl Game {
     /// Get the current game state. Returns GameState::WhatEver
     pub fn get_game_state(&self) -> GameState {
         
-        
         //Compute the GameState
-        let checked = self.check_for_check(self.white_turn);
+        let checked = self.check_for_check();
+        //println!("Get game state for {} and checked {}",self.white_turn, checked);
         if checked{
             let mut temp_game = self.clone();
             let white_turn = temp_game.white_turn;
             let mut checkmate = true;
             let offset: usize = if white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
-            'piece: for i in 0+offset..16+offset{
+            'piece: for i in 0+offset..16+offset{//For every friendly piece
                 for x in 0..8{
-                    for y in 0..8{
+                    for y in 0..8{//For every x, y in [0,7]
                         if temp_game.board[i].position.clone().to_string() == Position::new(x,y).to_string(){
-                            continue;
+                            continue;//Can't move to same position
                         }
                         let start = temp_game.board[i].position.clone().to_string();
                         let end = Position::new(x,y).to_string();
                         //Attempt every possible move by the player and see if the king still is in check
+                        
+                        match temp_game.make_move(start.to_string(), end.to_string()){
+                            None => continue,//Move not allowed
+                            Some(_) => ()
+                        }
+                        
+                        //Turn now reverted to original attacker
+                        
+                        temp_game.white_turn = !temp_game.white_turn;
 
-                        if !temp_game.check_for_check(white_turn){
+                        if !temp_game.check_for_check(){
                             //Some move allows the king to survive, break the outermost loop
                             println!("{} {} Not checkmate, {:?}, can do move {}-{}",white_turn, i,temp_game.board[i],start,end);
                             checkmate = false;
@@ -1243,128 +1248,74 @@ impl Game {
     
     //TODO: Make this return an option of vec of checking pieces (or positions)
     //In order to be able to check for checkmate
-    fn check_for_check(&self, check_white_king: bool) -> bool{
+    fn check_for_check(&self) -> bool{
         //true means that the king of the specified color is in check.
-        //let mut_ref_game = self;
+        
         let mut temp_game = self.clone();
+        //temp_game.white_turn = !temp_game.white_turn;
         let board = &mut temp_game.board;
-        self.check_for_check_board(board, check_white_king)
-    }
-    
-    fn check_for_check_board(&self, board: &mut Vec<Piecedata>, check_white_king: bool) -> bool{
+        let offset = if temp_game.white_turn {16} else {0};
+        let kingpos = if temp_game.white_turn {4} else {20};
         //This could be shortened to use a offset of 16 instead of two separate for-loops
-        if check_white_king{
-            //Check all black pieces
-            for i in 16..32{
-                let pieced: &Piecedata;
-                {
-                    pieced = &board[i];
-                }
-                if !pieced.is_alive{
-                    continue;
-                }
-                //Create a move from the attacking piece to the king, which we want to know the check-status of
-                let temp_move: Move = Move::new(
-                    pieced.position.clone(),
-                    board[4].position.clone());//king pos
-                    let variant: &str = &pieced.variant;
-                    match variant {
-                        //Convert the Piecedata instance into it's struct
-                        //Then check if the move is allowed
-                        //If it is, the king is in check
-                        "king" => {
-                            if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                println!("{:?} can check",pieced);
-                                return true    
-                            }
-                        },
-                        "pawn" => {
-                            if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                println!("{:?} can check",pieced);
-                                return true    
-                            }
-                        }
-                        "rook" => {
-                            if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                println!("{:?} can check",pieced);
-                                return true    
-                            }
-                        }
-                        "queen" => {
-                            if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                println!("{:?} can check",pieced);
-                                return true    
-                            }
-                        }
-                        "bishop" => {
-                            if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                println!("{:?} can check",pieced);
-                                return true    
-                            }
-                        }
-                        "nkight" => {
-                            if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                println!("{:?} can check",pieced);
-                                return true    
-                            }
-                        }
-                        _ => ()
-                    }
-                    
-                }
-            }else{
-                //Check all white pieces
-                for i in 0..16{
-                    let pieced = &board[i];
-                    if !pieced.is_alive{
-                        continue;
-                    }
-                    //Create a move from the attacking piece to the king, which we want to know the check-status of
-                    let temp_move: Move = Move::new(
-                        pieced.position.clone(),
-                        board[20].position.clone());//king pos
-
-                        let variant: &str = &pieced.variant;
-                        match variant {//Convert the Piecedata instance into it's struct
-                        //Then check if the move is allowed
-                        //If it is, the king is in check
-                        "king" => {
-                            if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                return true    
-                            }
-                        }
-                        "pawn" => {
-                            if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                return true    
-                            }
-                        }
-                        "rook" => {
-                            if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                return true    
-                            }
-                        }
-                        "queen" => {
-                            let tempstart = temp_move.start_pos.clone();
-                            let tempend = temp_move.end_pos.clone();
-                            if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                return true    
-                            }
-                        }
-                        "bishop" => {
-                            if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                return true    
-                            }
-                        }
-                        "nkight" => {
-                            if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move,true) {
-                                return true    
-                            }
-                        }
-                        _ => ()
-                    }
-                    
-                }
+        
+        for i in 0+offset..16+offset{
+            let pieced: &Piecedata;
+            {
+                pieced = &board[i];
             }
+            if !pieced.is_alive{
+                continue;
+            }
+            //Create a move from the attacking piece to the king, which we want to know the check-status of
+            let temp_move: Move = Move::new(
+                pieced.position.clone(),
+                board[kingpos].position.clone());//king pos
+                let variant: &str = &pieced.variant;
+                match variant {
+                    //Convert the Piecedata instance into it's struct
+                    //Then check if the move is allowed
+                    //If it is, the king is in check
+                    "king" => {
+                        if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
+                            return true    
+                        }
+                    },
+                    "pawn" => {
+                        if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
+                            return true    
+                        }
+                    }
+                    "rook" => {
+                        if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
+                            return true    
+                        }
+                    }
+                    "queen" => {
+                        if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
+                            return true    
+                        }
+                    }
+                    "bishop" => {
+                        if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
+                            return true    
+                        }
+                    }
+                    "nkight" => {
+                        if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
+                            println!("{:?} can check",pieced);
+                            return true    
+                        }
+                    }
+                    _ => ()
+                }
+                
+            }
+            
             //We have checked every piece. If noone can kill the king, the king is not in check.
             false
         }

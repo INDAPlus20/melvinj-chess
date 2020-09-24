@@ -152,9 +152,6 @@ fn string_to_pos(string: String)->Position{
 }
 
 fn move_check_a(game: &Game, m: &Move, cfc: bool) -> bool{
-    if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
-        println!("AT LEAST CHECKING A");
-    }
     //Elementary checks for making a move
     /*
     * Coords out of bounds
@@ -181,39 +178,14 @@ fn move_check_a(game: &Game, m: &Move, cfc: bool) -> bool{
     
     //White turn?
     let white_turn = game.white_turn;
-    if !cfc{
-        if white_turn != game.piece_at_pos_is_white(&m.start_pos){
-            //Moving enemy piece
-            if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
-                println!("Ovve4 moving enemy");
-            }
+    if white_turn != game.piece_at_pos_is_white(&m.start_pos){
+        //Moving enemy piece
+        return false;
+    }
+    if game.piece_at_pos_bool(&m.end_pos){
+        if white_turn == game.piece_at_pos_is_white(&m.end_pos){
+            //Piece at end pos of same color as attacker
             return false;
-        }
-        if game.piece_at_pos_bool(&m.end_pos){
-            if white_turn == game.piece_at_pos_is_white(&m.end_pos){
-                //Piece at end pos of same color as attacker
-                if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
-                    println!("Ovve4 end pos attacker team");
-                }
-                return false;
-            }
-        }
-    }else{
-        if white_turn == game.piece_at_pos_is_white(&m.start_pos){
-            //Moving enemy piece
-            if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
-                println!("Ovve4 cfc moving enemy");
-            }
-            return false;
-        }
-        if game.piece_at_pos_bool(&m.end_pos){
-            if white_turn != game.piece_at_pos_is_white(&m.end_pos){
-                //Piece at end pos of same color as attacker
-                if m.start_pos.to_string() == String::from("c4") && m.end_pos.to_string() == String::from("f7"){
-                    println!("Ovve4 cfc attacking same team");
-                }
-                return false;
-            }
         }
     }
     
@@ -894,7 +866,6 @@ impl Game {
     
     fn next_turn(&mut self){
         //A player completed their turn
-       println!("TURN CHANGING FROM {} TO {}",self.white_turn,!self.white_turn);
         self.white_turn = !self.white_turn;
         
         //Since enpassant is only valid the turn directly following the double-step
@@ -959,7 +930,6 @@ impl Game {
                             self.awaiting_promotion = Some(m.end_pos);
                         }else{
                             self.next_turn();
-                            println!("Move to {} performed, turn changed to {}",m.end_pos.to_string(),self.white_turn);
                         }
                         return Some(self.get_game_state());
                     }
@@ -1050,9 +1020,6 @@ impl Game {
         let checked = self.check_for_check(self.white_turn);
         if checked{
             let mut temp_game = self.clone();
-            if !temp_game.check_for_check(temp_game.white_turn){
-                println!("MAJOR ERROR");
-            }
             let white_turn = temp_game.white_turn;
             let mut checkmate = true;
             let offset: usize = if white_turn {0} else {16};//Offset index in order to only get the piecedata of one color
@@ -1065,11 +1032,7 @@ impl Game {
                         let start = temp_game.board[i].position.clone().to_string();
                         let end = Position::new(x,y).to_string();
                         //Attempt every possible move by the player and see if the king still is in check
-                        println!("TEMP GAME PRINTING:::");
-                        temp_game.print_game_state();
-                        temp_game.make_move(start.to_string(),end.to_string());
-                        temp_game.white_turn = white_turn;
-                        temp_game.print_game_state();
+
                         if !temp_game.check_for_check(white_turn){
                             //Some move allows the king to survive, break the outermost loop
                             println!("{} {} Not checkmate, {:?}, can do move {}-{}",white_turn, i,temp_game.board[i],start,end);
@@ -1124,9 +1087,6 @@ impl Game {
     /// 
     /// (optional) Don't forget to include en passant and [redacted].
     pub fn get_possible_moves(&self, string_position: String) -> Option<Vec<String>> {
-        if string_position == String::from("c4"){
-            println!("checking possible from c4");
-        }
         let position = string_to_pos(string_position);
         match self.awaiting_promotion{
             None => (),
@@ -1155,9 +1115,6 @@ impl Game {
                                 }
                             }
                             "pawn" => {
-                                if temp_move.end_pos.to_string() == String::from("b6"){
-                                    println!("enpassant: {}",temp_game.board[25].enpassantable);
-                                }
                                 if make_pawn(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
@@ -1173,9 +1130,6 @@ impl Game {
                                 }
                             }
                             "bishop" => {
-                                if temp_move.start_pos.to_string() == String::from("c4") && temp_move.end_pos.to_string() == String::from("f7"){
-                                    println!("def not possible from c4 to f7, {}", temp_game.white_turn);
-                                }
                                 if make_bishop(&piece).unwrap().is_move_allowed(&mut temp_game, temp_move) {
                                     vec.push(Position::new(x,y).to_string());   
                                 }
@@ -1369,9 +1323,7 @@ impl Game {
                     let temp_move: Move = Move::new(
                         pieced.position.clone(),
                         board[20].position.clone());//king pos
-                        if temp_move.start_pos.to_string() == String::from("f7") && temp_move.end_pos.to_string() == String::from("f8"){
-                            println!("Ovve1");
-                        }
+
                         let variant: &str = &pieced.variant;
                         match variant {//Convert the Piecedata instance into it's struct
                         //Then check if the move is allowed
@@ -1487,12 +1439,11 @@ impl Game {
             assert_eq!(game.get_game_state(), GameState::InProgress);
         }
         #[test]
-        fn white_king_at_correct_index() {
+        fn kings_at_correct_index() {
             //The white king should be at index 4.
             let game = Game::new();
             assert_eq!(game.board[4].variant, "king");
             assert_eq!(game.board[4].is_white, true);
-            println!("henlo {:?}",game.board[20]);
             assert_eq!(game.board[20].variant, "king");
             assert_eq!(game.board[20].is_white, false);
         }
@@ -1508,16 +1459,6 @@ impl Game {
         game.make_move(String::from("a8"), String::from("a7"));
         game.make_move(String::from("a5"), String::from("b6"));
         game.make_move(String::from("h5"), String::from("f7"));
-        if game.check_for_check(false){
-            println!("IN CHECK");
-        }
-        game.white_turn = true;
-        println!("SPECIAL TIME");
-        let vec = game.get_possible_moves(String::from("c4")).unwrap();
-        for pos in vec{
-            println!("BISH can move to {}",pos.to_string());
-        }
-        println!("white queen status: {:?}",game.board[3]);
         game.print_game_state();
         assert_eq!(game.get_game_state(), GameState::GameOver);
     }

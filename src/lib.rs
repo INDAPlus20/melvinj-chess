@@ -1253,22 +1253,21 @@ impl Game {
         
         let mut temp_game = self.clone();
         //temp_game.white_turn = !temp_game.white_turn;
-        let board = &mut temp_game.board;
+        let board = temp_game.board.clone();
         let offset = if temp_game.white_turn {16} else {0};
         let kingpos = if temp_game.white_turn {4} else {20};
         //This could be shortened to use a offset of 16 instead of two separate for-loops
         
+        temp_game.white_turn = !temp_game.white_turn;
+
         for i in 0+offset..16+offset{
-            let pieced: &Piecedata;
-            {
-                pieced = &board[i];
-            }
+            let pieced: &Piecedata = &board[i].clone();
             if !pieced.is_alive{
                 continue;
             }
             //Create a move from the attacking piece to the king, which we want to know the check-status of
             let temp_move: Move = Move::new(
-                pieced.position.clone(),
+                pieced.position.clone(),//Piece current pos
                 board[kingpos].position.clone());//king pos
                 let variant: &str = &pieced.variant;
                 match variant {
@@ -1276,38 +1275,38 @@ impl Game {
                     //Then check if the move is allowed
                     //If it is, the king is in check
                     "king" => {
-                        if make_king(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
-                            println!("{:?} can check",pieced);
+                        if make_king(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                            //println!("{:?} can check",pieced);
                             return true    
                         }
                     },
                     "pawn" => {
-                        if make_pawn(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
-                            println!("{:?} can check",pieced);
+                        if make_pawn(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                            //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "rook" => {
-                        if make_rook(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
-                            println!("{:?} can check",pieced);
+                        if make_rook(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                            //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "queen" => {
-                        if make_queen(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
-                            println!("{:?} can check",pieced);
+                        if make_queen(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                            //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "bishop" => {
-                        if make_bishop(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
-                            println!("{:?} can check",pieced);
+                        if make_bishop(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                            //println!("{:?} can check",pieced);
                             return true    
                         }
                     }
                     "nkight" => {
-                        if make_nkight(&pieced).unwrap().secondary_is_move_allowed(self, temp_move) {
-                            println!("{:?} can check",pieced);
+                        if make_nkight(&pieced).unwrap().secondary_is_move_allowed(&temp_game, temp_move) {
+                            //println!("{:?} can check",pieced);
                             return true    
                         }
                     }

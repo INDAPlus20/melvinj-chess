@@ -744,7 +744,6 @@ impl Piece for Queen {
                 }
             }
             if !right && !up{
-                println!("I WAS HERE");
                 for i in 0..distance(m.start_pos.x,m.end_pos.x){
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
                 }
@@ -1184,16 +1183,23 @@ impl Game {
         //Prints the current game state into the console
         for x in 0..8{
             'y: for y in 0..8{
+                //println!("i");
                 for piece in &self.board{
-                    if piece.position.to_string() == Position::new(x,y).to_string(){
+                    //println!("1: {}, 2: {}",piece.position.to_string(),Position::new(x,y).to_string());
+                    if piece.position.to_string() == Position::new(y,7-x).to_string(){
+                        //print!("a");
                         print!(" {} ", piece.variant.chars().next().unwrap());
                         continue 'y;
                     }
                 }
                 print!(" * ");
             }
+            print!("| {}",7-x+1);
+
             println!();
         }
+        println!("------------------------");
+        println!(" a  b  c  d  e  f  g  h");
     }
     
     //TODO: Make this return an option of vec of checking pieces (or positions)
@@ -1361,7 +1367,8 @@ mod tests {
 
     #[test]
     fn print_state() {
-        let game = Game::new();
+        let mut game = Game::new();
+        game.make_move(String::from("a2"), String::from("a4"));//double-step
         game.print_game_state();
     }
 

@@ -1295,20 +1295,7 @@ impl Game {
             false
         }
     }
-    
-    /// Implement print routine for Game.
-    /// 
-    /// Output example:
-    /// |:----------------------:|
-    /// | R  Kn B  K  Q  B  Kn R |
-    /// | P  P  P  P  P  P  P  P |
-    /// | *  *  *  *  *  *  *  * |
-    /// | *  *  *  *  *  *  *  * |
-    /// | *  *  *  *  *  *  *  * |
-    /// | *  *  *  *  *  *  *  * |
-    /// | P  P  P  P  P  P  P  P |
-    /// | R  Kn B  K  Q  B  Kn R |
-    /// |:----------------------:|
+
     impl fmt::Debug for Game {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             /* build board representation string */

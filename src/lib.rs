@@ -176,8 +176,6 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
         return false
     }
     
-    
-    
     //White turn?
     let white_turn = game.white_turn;
     
@@ -186,11 +184,12 @@ fn move_check_a(game: &Game, m: &Move) -> bool{
         return false;
     }
     if game.piece_at_pos_bool(&m.end_pos){
-        if white_turn != game.piece_at_pos_is_white(&m.end_pos){
+        if white_turn == game.piece_at_pos_is_white(&m.end_pos){
             //Piece at end pos of same color as attacker
             return false;
         }
     }
+
     true
 }
 
@@ -421,6 +420,8 @@ impl Piece for Pawn {
                     //promotion. We have a &-reference here, so done elsewhere for now
                 }
             }
+        }else{
+            return false;
         }
         return true
         
@@ -517,7 +518,7 @@ impl Piece for Rook {
         }
         //Check intermediary positions
         for clear_pos in clear_positions{
-            if !game.piece_at_pos_bool(&clear_pos){
+            if game.piece_at_pos_bool(&clear_pos){
                 return false
             }
         }
@@ -570,22 +571,22 @@ impl Piece for Bishop {
             let right = m.start_pos.x < m.end_pos.x;
             let up = m.start_pos.y < m.end_pos.y;
             if right && up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y+i));
                 }
             }
             if right && !up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y-i));
                 }
             }
             if !right && up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y+i));
                 }
             }
             if !right && !up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
                 }
             }
@@ -594,7 +595,7 @@ impl Piece for Bishop {
         }
         //Check intermediary positions
         for clear_pos in clear_positions{
-            if !game.piece_at_pos_bool(&clear_pos){
+            if game.piece_at_pos_bool(&clear_pos){
                 return false
             }
         }
@@ -711,22 +712,22 @@ impl Piece for Queen {
             let right = m.start_pos.x < m.end_pos.x;
             let up = m.start_pos.y < m.end_pos.y;
             if right && up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y+i));
                 }
             }
             if right && !up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x+i,m.start_pos.y-i));
                 }
             }
             if !right && up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y+i));
                 }
             }
             if !right && !up{
-                for i in 0..distance(m.start_pos.x,m.end_pos.x){
+                for i in 1..distance(m.start_pos.x,m.end_pos.x)-1{
                     clear_positions.push(Position::new(m.start_pos.x-i,m.start_pos.y-i));
                 }
             }
@@ -735,7 +736,7 @@ impl Piece for Queen {
         }
         //Check intermediary positions
         for clear_pos in clear_positions{
-            if !game.piece_at_pos_bool(&clear_pos){
+            if game.piece_at_pos_bool(&clear_pos){
                 return false
             }
         }
@@ -1425,5 +1426,24 @@ impl Game {
             //The white king should be at index 4.
             let game = Game::new();
             assert_eq!(game.board[4].variant, "king");
+        }
+
+        #[test]
+        fn skolmatt() {//Can't find proper translation, 'school mat' is terrible
+            let mut game = Game::new();
+            game.make_move(String::from("e2"), String::from("e3"));
+            game.make_move(String::from("a7"), String::from("a5"));
+            game.make_move(String::from("f1"), String::from("c4"));
+            game.make_move(String::from("a5"), String::from("a4"));
+            game.make_move(String::from("d1"), String::from("h5"));
+            let vec = game.get_possible_moves(String::from("a4")).unwrap();
+            for ahepp in vec{
+                println!("UwU {}",ahepp.to_string());
+            }
+            game.make_move(String::from("a8"), String::from("a7"));
+            game.make_move(String::from("a5"), String::from("b6"));
+            game.make_move(String::from("h5"), String::from("f7"));
+            game.print_game_state();
+            assert_eq!(game.get_game_state(), GameState::GameOver);
         }
     }

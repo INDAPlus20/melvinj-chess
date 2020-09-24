@@ -15,7 +15,7 @@ pub enum GameState {
 
 /* IMPORTANT:
 * - Document well!
-* - Write well structured and [somewhat] clean code!
+* - Write well structured and somewhat clean code!
 */
 
 pub struct Game {
@@ -49,7 +49,7 @@ impl Piecedata {
 impl fmt::Debug for Piecedata {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         /* Piecedata debugging information */
-        f.debug_struct("Piecedata")
+        f.debug_struct("Point")
         .field("Variant:", &self.variant)
         .field("Position:", &self.position.to_string())
         .field("Alive:", &self.is_alive)
@@ -114,35 +114,6 @@ fn make_nkight(data: &Piecedata) -> Option<Nkight>{
     }else {
         None
     }
-}
-
-fn horizontal_positions(m: Move) -> Vec<Position>{
-    let mut clear_positions: Vec<Position> = Vec::new();
-    if m.start_pos.y == m.end_pos.y{
-        //Horizontal
-        if m.start_pos.x+1 > m.end_pos.x{
-            for i in m.end_pos.x..m.start_pos.x{
-                clear_positions.push(Position::new(i,m.start_pos.y));
-            }
-        }else{
-            for i in m.start_pos.x+1..m.end_pos.x{
-                clear_positions.push(Position::new(i,m.start_pos.y));
-            }
-        }
-        
-    }else if m.start_pos.x == m.end_pos.x{
-        //Vertical
-        if m.start_pos.y > m.end_pos.y{
-            for i in m.end_pos.y+1..m.start_pos.y{
-                clear_positions.push(Position::new(m.start_pos.x,i));
-            }
-        }else{
-            for i in m.start_pos.y+1..m.end_pos.y{
-                clear_positions.push(Position::new(m.start_pos.x,i));
-            }
-        }
-    }
-    return clear_positions
 }
 
 //Converts a String to a position. 
@@ -520,8 +491,26 @@ impl Piece for Rook {
         }
         
         //Unique code for piece movement
-        let clear_positions = horizontal_positions(m);
+        let mut clear_positions: Vec<Position> = Vec::new();
         
+        if m.start_pos.x != m.end_pos.x{
+            if m.start_pos.y != m.end_pos.y{
+                return false;
+            }else{
+                for i in m.start_pos.x..m.end_pos.x{
+                    if i != m.start_pos.x && i != m.end_pos.x{
+                        clear_positions.push(Position::new(i,m.start_pos.y));
+                    }
+                }
+            }
+        }else{
+            //Straight line or same position (should be checked before calling this function)
+            for i in m.start_pos.y..m.end_pos.y{
+                if i != m.start_pos.y && i != m.end_pos.y{
+                    clear_positions.push(Position::new(m.start_pos.x,i));
+                }
+            }
+        }
         //Check intermediary positions
         for clear_pos in clear_positions{
             if game.piece_at_pos_bool(&clear_pos){
@@ -703,8 +692,29 @@ impl Piece for Queen {
         //Unique code for piece movement
         let mut clear_positions: Vec<Position> = Vec::new();
         
-        if m.start_pos.y == m.end_pos.y || m.start_pos.x == m.end_pos.x{
-            clear_positions = horizontal_positions(m);
+        if m.start_pos.y == m.end_pos.y{
+            //Horizontal
+            if m.start_pos.x+1 > m.end_pos.x{
+                for i in m.end_pos.x..m.start_pos.x{
+                    clear_positions.push(Position::new(i,m.start_pos.y));
+                }
+            }else{
+                for i in m.start_pos.x+1..m.end_pos.x{
+                    clear_positions.push(Position::new(i,m.start_pos.y));
+                }
+            }
+            
+        }else if m.start_pos.x == m.end_pos.x{
+            //Vertical
+            if m.start_pos.y > m.end_pos.y{
+                for i in m.end_pos.y+1..m.start_pos.y{
+                    clear_positions.push(Position::new(m.start_pos.x,i));
+                }
+            }else{
+                for i in m.start_pos.y+1..m.end_pos.y{
+                    clear_positions.push(Position::new(m.start_pos.x,i));
+                }
+            }
         }else if distance(m.start_pos.x,m.end_pos.x) == distance(m.start_pos.y, m.end_pos.y){
             //Diagonal
             
@@ -865,13 +875,9 @@ impl Game {
     /// If the current game state is InProgress and the move is legal, 
     /// move a piece and return the resulting state of the game.
     pub fn make_move(&mut self, from_str: String, to_str: String) -> Option<GameState> {
-        if self.make_move_private(from_str,to_str){
-            return Some(self.get_game_state());
-        }else{
-            return None
-        }
+        self.make_move_private(from_str,to_str)//Yes
     }
-    fn make_move_private(&mut self, from_str: String, to_str: String) -> bool {
+    fn make_move_private(&mut self, from_str: String, to_str: String) -> Option<GameState> {
         let from = string_to_pos(from_str);
         let to = string_to_pos(to_str);
         
@@ -879,7 +885,7 @@ impl Game {
         let maybe_vec = (&self).get_possible_moves(from.clone().to_string());
         let mut move_allowed:bool = false;
         match maybe_vec{
-            None => return false,
+            None => return None,
             Some(v) => {
                 for element in v{
                     if element == to.to_string(){
@@ -892,14 +898,14 @@ impl Game {
         }
         if !move_allowed{
             //get_possible_moves does not think the move is possible, return
-            return false;
+            return None;
         }
         
         //Do the move
         
         let m: Move = Move::new(from.clone(),to);
         match self.piece_at_pos(&from){
-            None => return false,//No piece at position, can't make move. Should have returned in previous step
+            None => return None,//No piece at position, can't make move. Should have returned in previous step
             Some(piece) => {
                 let cloned_piece = piece.clone();
                 let literal_variant: &str = &piece.variant;
@@ -911,7 +917,7 @@ impl Game {
                     "king" => {
                         make_king(&cloned_piece).unwrap().do_move(self, m);
                         self.next_turn();
-                        return true;
+                        return Some(self.get_game_state());
                     }
                     "pawn" => {
                         make_pawn(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
@@ -921,34 +927,34 @@ impl Game {
                         }else{
                             self.next_turn();
                         }
-                        return true;
+                        return Some(self.get_game_state());
                     }
                     "rook" => {
                         make_rook(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return true;
+                        return Some(self.get_game_state());
                     }
                     "queen" => {
                         make_queen(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return true;
+                        return Some(self.get_game_state());
                     }
                     "bishop" => {
                         make_bishop(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return true;
+                        return Some(self.get_game_state());
                     }
                     "nkight" => {
                         make_nkight(&cloned_piece).unwrap().do_move(self, Move::new(m.start_pos.clone(),m.end_pos.clone()));
                         self.next_turn();
-                        return true;
+                        return Some(self.get_game_state());
                     }
                     _ => ()
                 }
             } 
         }
         
-        false
+        None
         
     }
     
@@ -1250,6 +1256,7 @@ impl Game {
         let board = temp_game.board.clone();
         let offset = if temp_game.white_turn {16} else {0};
         let kingpos = if temp_game.white_turn {4} else {20};
+        //This could be shortened to use a offset of 16 instead of two separate for-loops
         
         temp_game.white_turn = !temp_game.white_turn;
 

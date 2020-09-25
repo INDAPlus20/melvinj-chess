@@ -828,7 +828,7 @@ impl Game {
         let game = Game {
             white_turn: true,
             awaiting_promotion: None,
-            board:Vec::new()
+            board:Vec::with_capacity(32)
         };
         
         let realgame = game.create_pieces();
